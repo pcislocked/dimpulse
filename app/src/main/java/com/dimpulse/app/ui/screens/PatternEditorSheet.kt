@@ -89,6 +89,7 @@ fun PatternEditorSheet(
     var bypassDnd by remember { mutableStateOf(existing?.bypassDnd ?: false) }
     var triggerOrientation by remember { mutableStateOf(existing?.triggerOrientation) }
     var alertImportanceFilter by remember { mutableStateOf(existing?.alertImportanceFilter) }
+    var cooldownSeconds by remember { mutableStateOf(existing?.cooldownSeconds) }
 
     val safeMax = maxStrengthLevel.coerceAtLeast(1)
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -330,6 +331,54 @@ fun PatternEditorSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Burst Rate Limit / Cooldown Debounce
+            Text(
+                text = "BURST RATE LIMIT (COOLDOWN)",
+                style = MaterialTheme.typography.labelSmall,
+                color = TextMuted,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf(
+                    null to "Default (Global)",
+                    0 to "Off",
+                    1 to "1s",
+                    2 to "2s",
+                    3 to "3s",
+                    5 to "5s",
+                    10 to "10s"
+                ).forEach { (cdOption, label) ->
+                    val isSelected = cooldownSeconds == cdOption
+                    val bg = if (isSelected) AmberPrimary else DarkSurfaceVariant
+                    val textCol = if (isSelected) DarkBackground else TextPrimary
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(bg)
+                            .border(1.dp, if (isSelected) AmberPrimary else DarkBorder, RoundedCornerShape(10.dp))
+                            .clickable { cooldownSeconds = cdOption }
+                            .padding(horizontal = 12.dp, vertical = 7.dp)
+                    ) {
+                        Text(
+                            text = label,
+                            fontSize = 12.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = textCol
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Bypass DND Switch
             Row(
                 modifier = Modifier
@@ -412,6 +461,7 @@ fun PatternEditorSheet(
                             strengthLevel = strengthLevel.roundToInt(),
                             repeatCount = repeatCount,
                             repeatIntervalSeconds = repeatIntervalSec,
+                            cooldownSeconds = cooldownSeconds,
                             bypassDnd = bypassDnd,
                             triggerOrientation = triggerOrientation,
                             alertImportanceFilter = alertImportanceFilter

@@ -103,13 +103,16 @@ class DimFlashNotificationListener : NotificationListenerService() {
             return
         }
 
-        // 8. Package Cooldown Debounce (e.g. 1.5s per package to prevent flood)
-        val lastTime = lastTriggerTimePerPackage[packageName] ?: 0L
-        if (now - lastTime < 1500L) {
-            Log.d(tag, "Debouncing rapid notification burst for $packageName")
-            return
+        // 8. User-Configurable Burst Rate Limit / Cooldown Debounce
+        val cooldownSec = appConfig?.cooldownSeconds ?: globalSettings.cooldownSeconds
+        if (cooldownSec > 0) {
+            val lastTime = lastTriggerTimePerPackage[packageName] ?: 0L
+            if (now - lastTime < cooldownSec * 1000L) {
+                Log.d(tag, "Debouncing rapid notification burst for $packageName (Rate limit: ${cooldownSec}s)")
+                return
+            }
+            lastTriggerTimePerPackage[packageName] = now
         }
-        lastTriggerTimePerPackage[packageName] = now
 
         // 9. Orientation & Table / Pocket Gating & Pulse Dispatch
         serviceScope.launch {
@@ -152,11 +155,9 @@ class DimFlashNotificationListener : NotificationListenerService() {
                 val importance = ranking.importance
                 val channel = ranking.channel
                 val channelImportance = channel?.importance ?: NotificationManager.IMPORTANCE_DEFAULT
-                // Alerting if importance >= IMPORTANCE_DEFAULT (3) and channel is not silent
                 importance >= NotificationManager.IMPORTANCE_DEFAULT && channelImportance >= NotificationManager.IMPORTANCE_DEFAULT
             } else {
                 val channelId = sbn.notification.channelId
-                // Fallback: check legacy flags or assume alerting if unknown
                 val hasSoundOrVibrate = sbn.notification.sound != null ||
                         sbn.notification.vibrate != null ||
                         (sbn.notification.defaults and (Notification.DEFAULT_SOUND or Notification.DEFAULT_VIBRATE)) != 0

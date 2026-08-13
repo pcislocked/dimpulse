@@ -11,6 +11,7 @@ data class AppFlashConfig(
     val strengthLevel: Int = 1,
     val repeatCount: Int = 1,
     val repeatIntervalSeconds: Int = 0,
+    val cooldownSeconds: Int? = null, // null = inherit global
     val bypassDnd: Boolean = false,
     val triggerOrientation: TriggerOrientation? = null,
     val alertImportanceFilter: AlertImportanceFilter? = null,

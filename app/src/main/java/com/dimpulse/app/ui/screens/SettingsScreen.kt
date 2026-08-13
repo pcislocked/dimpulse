@@ -335,6 +335,51 @@ fun SettingsScreen(
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Burst Rate Limit / Cooldown Debounce
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "Burst Rate Limit (Cooldown)",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = if (globalSettings.cooldownSeconds == 0) "No rate limit" else "Max 1 flash per ${globalSettings.cooldownSeconds}s per app (prevents spam)",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondary,
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf(0, 1, 2, 3, 5, 10).forEach { sec ->
+                            val isSel = globalSettings.cooldownSeconds == sec
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSel) AmberPrimary else DarkSurfaceVariant)
+                                    .clickable {
+                                        mainViewModel.updateSettings { it.copy(cooldownSeconds = sec) }
+                                    }
+                                    .padding(horizontal = 8.dp, vertical = 5.dp)
+                            ) {
+                                Text(
+                                    text = if (sec == 0) "Off" else "${sec}s",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSel) DarkBackground else TextSecondary
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
 
