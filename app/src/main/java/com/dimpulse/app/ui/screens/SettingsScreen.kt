@@ -142,6 +142,8 @@ fun SettingsScreen(
                     }
                 }
             }
+        }
+
         // Section 2: Alert Sound & Silent Filter
         SectionHeader(title = "ALERT IMPORTANCE FILTER")
 
@@ -336,7 +338,7 @@ fun SettingsScreen(
             }
         }
 
-        // Section 3: Smart Environmental Filters
+        // Section 4: Environmental Filters
         SectionHeader(title = "ENVIRONMENTAL FILTERS")
 
         Card(
@@ -415,7 +417,7 @@ fun SettingsScreen(
             }
         }
 
-        // Section 4: Privacy & Attribution
+        // Section 5: Privacy & Attribution
         SectionHeader(title = "PRIVACY & ATTRIBUTION")
 
         Card(
