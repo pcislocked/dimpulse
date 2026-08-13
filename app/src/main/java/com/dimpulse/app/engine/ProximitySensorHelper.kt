@@ -82,10 +82,10 @@ class ProximitySensorHelper(private val context: Context) {
 
                         try {
                             proximitySensor?.let {
-                                sensorManager.registerListener(listener, it, SensorManager.SENSOR_DELAY_FASTEST, mainHandler)
+                                sensorManager.registerListener(listener, it, SensorManager.SENSOR_DELAY_NORMAL, mainHandler)
                             }
                             accelerometer?.let {
-                                sensorManager.registerListener(listener, it, SensorManager.SENSOR_DELAY_FASTEST, mainHandler)
+                                sensorManager.registerListener(listener, it, SensorManager.SENSOR_DELAY_NORMAL, mainHandler)
                             }
                         } catch (e: Exception) {
                             Log.e(tag, "Error registering sensor listener: ${e.message}")
