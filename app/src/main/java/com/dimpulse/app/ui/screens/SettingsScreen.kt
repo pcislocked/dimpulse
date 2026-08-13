@@ -308,7 +308,7 @@ fun SettingsScreen(
                 ) {
                     Column {
                         Text(
-                            text = "DimPulse v1.0.0 (Pixel Highlight)",
+                            text = "DimPulse (Mimics HiLight on Android 13+)",
                             style = MaterialTheme.typography.labelSmall,
                             color = TextPrimary,
                             fontWeight = FontWeight.Bold

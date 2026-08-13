@@ -1,7 +1,7 @@
 <div align="center">
 
-# 💡 DimPulse (Pixel Highlight)
-### Ambient, Granular LED Notification System for Android 13+
+# 💡 DimPulse
+### Ambient LED Notification System Mimicking HiLight on Android 13+
 
 [![Android 13+](https://img.shields.io/badge/Android-13%2B%20(API%2033--35)-3DDC84?logo=android&logoColor=white)](https://developer.android.com)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.1.0-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
@@ -11,7 +11,7 @@
 [![Privacy: 100% Offline](https://img.shields.io/badge/Privacy-100%25%20Offline%20(Zero%20INTERNET)-success)](AndroidManifest.xml)
 [![AI Generated](https://img.shields.io/badge/Architected%20%26%20Generated%20by-Gemini%203.7%20Flash%20(High)-blueviolet)](https://deepmind.google/technologies/gemini/)
 
-*Transform your rear LED flash into a subtle, organic, multi-level notification indicator mimicking physical notification LEDs without blinding you in the dark.*
+*Transform your rear LED flash into a subtle, organic, multi-level notification indicator that mimics the newly announced Pixel HiLight experience on Android 13+ devices without blinding you in the dark.*
 
 ---
 
@@ -22,11 +22,11 @@
 
 ---
 
-## 🌟 Key Highlights & Philosophy
+## 🌟 Key Features & Philosophy
 
-Traditional Android flash notification apps fire the rear LED at **100% maximum luminance** (~200+ lumens). In a dark bedroom or meeting room, this causes blinding flashes and heavy battery drain.
+Traditional Android flash notification apps fire the rear LED at **100% maximum luminance** (~200+ lumens). In a dark room or meeting, this causes blinding flashes and heavy battery drain.
 
-**DimPulse** leverages the Android 13+ Camera2 Hardware Flash Strength API (`turnOnTorchWithStrengthLevel`) to deliver:
+**DimPulse mimics the Pixel HiLight experience** by leveraging the Android 13+ Camera2 Hardware Flash Strength API (`turnOnTorchWithStrengthLevel`) to deliver:
 - 💡 **Sub-milliamp Level 1 Ambient Glow:** A gentle, non-glare micro-blip visible on a desk without illuminating the whole room.
 - 🌊 **Organic Breathing Glow:** Smooth sinusoidal rise-and-fall luminance ramps (~400ms) stepped across discrete hardware levels.
 - 🎯 **Per-App Customization:** Assign distinct waveforms and brightness levels to different applications (e.g. subtle single pulse for Slack, organic breathing for Phone calls).
