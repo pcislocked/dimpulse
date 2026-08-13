@@ -61,6 +61,7 @@ import com.dimpulse.app.data.model.FlashPattern
 import com.dimpulse.app.data.model.LightProfilePreset
 import com.dimpulse.app.data.model.TriggerOrientation
 import com.dimpulse.app.ui.components.LedConfigurationEditor
+import com.dimpulse.app.ui.components.TimingSliderWithInput
 import com.dimpulse.app.ui.theme.AmberPrimary
 import com.dimpulse.app.ui.theme.DarkBackground
 import com.dimpulse.app.ui.theme.DarkBorder
