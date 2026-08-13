@@ -1,7 +1,6 @@
 package com.dimpulse.app.engine
 
 import com.dimpulse.app.data.model.FlashPattern
-import com.dimpulse.app.data.model.FlashStyle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -42,42 +41,22 @@ class PulseEngine(
                 activeJob?.cancelAndJoin()
                 activeJob = launch {
                     try {
-                        withTimeout(7000L) { // Safety watchdog: 7-second hard cutoff
+                        withTimeout(8000L) { // Safety watchdog: 8-second hard cutoff
+                            val targetLevel = strengthLevel.coerceAtLeast(1)
                             val repeats = pattern.repeatCount.coerceIn(1, 4)
+
                             for (r in 0 until repeats) {
-                                when (pattern.style) {
-                                    FlashStyle.BREATHING -> {
-                                        runBreathing(
-                                            maxLevel = strengthLevel,
-                                            durationMs = pattern.breathingDurationMs,
-                                            steps = pattern.breathingSteps
-                                        )
-                                    }
-                                    FlashStyle.CRISP_PULSE -> {
-                                        runCrisp(
-                                            strengthLevel = strengthLevel,
-                                            onDurationMs = pattern.onDurationMs
-                                        )
-                                    }
-                                    FlashStyle.FADE_OUT -> {
-                                        runFadeOut(
-                                            maxLevel = strengthLevel,
-                                            durationMs = pattern.breathingDurationMs,
-                                            steps = pattern.breathingSteps
-                                        )
-                                    }
-                                    FlashStyle.FADE_IN -> {
-                                        runFadeIn(
-                                            maxLevel = strengthLevel,
-                                            durationMs = pattern.breathingDurationMs,
-                                            steps = pattern.breathingSteps
-                                        )
-                                    }
-                                }
+                                executeSinglePulse(
+                                    maxLevel = targetLevel,
+                                    fadeInMs = pattern.fadeInMs.coerceAtLeast(0L),
+                                    stayOnMs = pattern.stayOnMs.coerceAtLeast(0L),
+                                    fadeOutMs = pattern.fadeOutMs.coerceAtLeast(0L)
+                                )
 
                                 if (r < repeats - 1) {
                                     flashController.turnOff()
-                                    delay(pattern.offDurationMs)
+                                    val gap = pattern.gapMs.coerceAtLeast(20L)
+                                    delay(gap)
                                 }
                             }
                         }
@@ -90,91 +69,56 @@ class PulseEngine(
         }
     }
 
-    private suspend fun runCrisp(
-        strengthLevel: Int,
-        onDurationMs: Long = 100L
-    ) {
-        flashController.setFlashStrength(strengthLevel)
-        delay(onDurationMs)
-        flashController.turnOff()
-    }
-
-    private suspend fun runBreathing(
+    private suspend fun executeSinglePulse(
         maxLevel: Int,
-        durationMs: Long = 350L,
-        steps: Int = 16
+        fadeInMs: Long,
+        stayOnMs: Long,
+        fadeOutMs: Long
     ) {
+        // If device has only binary torch or level 1, simple square pulse
         if (maxLevel <= 1) {
             flashController.setFlashStrength(1)
-            delay((durationMs / 3).coerceIn(40L, 160L))
+            val totalOn = (fadeInMs + stayOnMs + fadeOutMs).coerceIn(40L, 400L)
+            delay(totalOn)
             flashController.turnOff()
             return
         }
 
-        val stepDelay = (durationMs / steps).coerceAtLeast(10L)
-
-        // Sinusoidal ramp up and down
-        for (i in 0..steps) {
-            val progress = i.toDouble() / steps.toDouble()
-            val factor = 0.5 * (1.0 - cos(progress * 2.0 * PI))
-            val currentLevel = (1 + factor * (maxLevel - 1)).roundToInt().coerceIn(1, maxLevel)
-            flashController.setFlashStrength(currentLevel)
-            delay(stepDelay)
-        }
-        flashController.turnOff()
-    }
-
-    private suspend fun runFadeOut(
-        maxLevel: Int,
-        durationMs: Long = 350L,
-        steps: Int = 12
-    ) {
-        if (maxLevel <= 1) {
-            flashController.setFlashStrength(1)
-            delay((durationMs / 3).coerceIn(40L, 140L))
-            flashController.turnOff()
-            return
+        // 1. Fade-In Ramp
+        if (fadeInMs > 0) {
+            val steps = ((fadeInMs / 15L).toInt()).coerceIn(4, 16)
+            val stepDelay = (fadeInMs / steps).coerceAtLeast(10L)
+            for (i in 0..steps) {
+                val progress = i.toDouble() / steps.toDouble()
+                // Cosine easing: 0 -> 1
+                val factor = 0.5 * (1.0 - cos(progress * PI))
+                val currentLevel = (1 + factor * (maxLevel - 1)).roundToInt().coerceIn(1, maxLevel)
+                flashController.setFlashStrength(currentLevel)
+                delay(stepDelay)
+            }
+        } else {
+            flashController.setFlashStrength(maxLevel)
         }
 
-        val stepDelay = (durationMs / steps).coerceAtLeast(10L)
-
-        // Fast attack to maxLevel
-        flashController.setFlashStrength(maxLevel)
-        delay(35L)
-
-        // Smooth gradual decay down to 1
-        for (i in 1..steps) {
-            val progress = i.toDouble() / steps.toDouble()
-            val factor = 1.0 - progress
-            val currentLevel = (1 + factor * (maxLevel - 1)).roundToInt().coerceIn(1, maxLevel)
-            flashController.setFlashStrength(currentLevel)
-            delay(stepDelay)
-        }
-        flashController.turnOff()
-    }
-
-    private suspend fun runFadeIn(
-        maxLevel: Int,
-        durationMs: Long = 350L,
-        steps: Int = 12
-    ) {
-        if (maxLevel <= 1) {
-            flashController.setFlashStrength(1)
-            delay((durationMs / 3).coerceIn(40L, 140L))
-            flashController.turnOff()
-            return
+        // 2. Stay-On Peak Hold
+        if (stayOnMs > 0) {
+            flashController.setFlashStrength(maxLevel)
+            delay(stayOnMs)
         }
 
-        val stepDelay = (durationMs / steps).coerceAtLeast(10L)
-
-        // Smooth gradual rise from 1 to maxLevel
-        for (i in 0..steps) {
-            val progress = i.toDouble() / steps.toDouble()
-            val currentLevel = (1 + progress * (maxLevel - 1)).roundToInt().coerceIn(1, maxLevel)
-            flashController.setFlashStrength(currentLevel)
-            delay(stepDelay)
+        // 3. Fade-Out Decay
+        if (fadeOutMs > 0) {
+            val steps = ((fadeOutMs / 15L).toInt()).coerceIn(4, 16)
+            val stepDelay = (fadeOutMs / steps).coerceAtLeast(10L)
+            for (i in 1..steps) {
+                val progress = i.toDouble() / steps.toDouble()
+                val factor = 0.5 * (1.0 + cos(progress * PI))
+                val currentLevel = (1 + factor * (maxLevel - 1)).roundToInt().coerceIn(1, maxLevel)
+                flashController.setFlashStrength(currentLevel)
+                delay(stepDelay)
+            }
         }
-        delay(35L)
+
         flashController.turnOff()
     }
 }

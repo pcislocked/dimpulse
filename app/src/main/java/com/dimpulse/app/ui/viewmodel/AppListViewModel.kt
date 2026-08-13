@@ -144,10 +144,14 @@ class AppListViewModel : ViewModel() {
                     packageName = app.packageName,
                     appName = app.appName,
                     isEnabled = isEnabled,
-                    flashStyle = global.defaultFlashStyle,
+                    profilePreset = global.defaultProfilePreset,
                     repeatCount = global.defaultRepeatCount,
                     strengthLevel = global.defaultStrength,
-                    breathingDurationMs = global.breathingDurationMs
+                    fadeInMs = global.defaultFadeInMs,
+                    stayOnMs = global.defaultStayOnMs,
+                    fadeOutMs = global.defaultFadeOutMs,
+                    gapMs = global.defaultGapMs,
+                    cooldownSeconds = global.cooldownSeconds
                 )
                 repository.saveAppConfig(newConfig)
             }

@@ -182,7 +182,7 @@ fun AppListScreen(
                 ) { appItem ->
                     AppConfigItem(
                         appItem = appItem,
-                        defaultFlashStyle = globalSettings.defaultFlashStyle,
+                        defaultPreset = globalSettings.defaultProfilePreset,
                         defaultRepeatCount = globalSettings.defaultRepeatCount,
                         defaultStrength = globalSettings.defaultStrength,
                         onClick = { appListViewModel.selectAppForEdit(appItem) },
@@ -198,19 +198,21 @@ fun AppListScreen(
     }
 
     // Modal Editor Bottom Sheet
+    val isTesting by mainViewModel.isTestingPulse.collectAsState()
     selectedAppForEdit?.let { app ->
         PatternEditorSheet(
             appItem = app,
+            globalSettings = globalSettings,
             maxStrengthLevel = hardwareInfo.maxStrengthLevel,
-            defaultFlashStyle = globalSettings.defaultFlashStyle,
-            defaultRepeatCount = globalSettings.defaultRepeatCount,
-            defaultStrength = globalSettings.defaultStrength,
-            defaultBreathingDurationMs = globalSettings.breathingDurationMs,
+            isTesting = isTesting,
             onDismiss = { appListViewModel.selectAppForEdit(null) },
             onSave = { config -> appListViewModel.saveConfig(config) },
             onReset = { pkg -> appListViewModel.resetAppConfig(pkg) },
             onTestPattern = { pattern, strength ->
                 mainViewModel.triggerTestPulse(pattern, strength)
+            },
+            onStopTestPattern = {
+                mainViewModel.stopTestPulse()
             }
         )
     }

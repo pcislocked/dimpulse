@@ -32,7 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
-import com.dimpulse.app.data.model.FlashStyle
+import com.dimpulse.app.data.model.LightProfilePreset
 import com.dimpulse.app.ui.theme.AmberPrimary
 import com.dimpulse.app.ui.theme.DarkBorder
 import com.dimpulse.app.ui.theme.DarkSurface
@@ -45,7 +45,7 @@ import com.dimpulse.app.ui.viewmodel.InstalledAppItem
 @Composable
 fun AppConfigItem(
     appItem: InstalledAppItem,
-    defaultFlashStyle: FlashStyle,
+    defaultPreset: LightProfilePreset,
     defaultRepeatCount: Int,
     defaultStrength: Int,
     onClick: () -> Unit,
@@ -54,7 +54,7 @@ fun AppConfigItem(
 ) {
     val config = appItem.config
     val isEnabled = config?.isEnabled ?: false
-    val style = config?.flashStyle ?: defaultFlashStyle
+    val preset = config?.profilePreset ?: defaultPreset
     val repeats = config?.repeatCount ?: defaultRepeatCount
     val strength = config?.strengthLevel ?: defaultStrength
     val hasCustomConfig = config != null
@@ -116,9 +116,8 @@ fun AppConfigItem(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(top = 2.dp)
                     ) {
-                        val durText = if (config?.breathingDurationMs != null) " • ${config.breathingDurationMs}ms" else ""
                         Text(
-                            text = "${style.title} • ${repeats}x • Lvl $strength$durText",
+                            text = "${preset.title} • ${repeats}x • Lvl $strength",
                             style = MaterialTheme.typography.bodyMedium,
                             color = if (hasCustomConfig) AmberPrimary else TextSecondary,
                             fontSize = 12.sp
@@ -139,7 +138,7 @@ fun AppConfigItem(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Switch
+            // Active Toggle
             Switch(
                 checked = isEnabled,
                 onCheckedChange = onToggle,
@@ -166,8 +165,8 @@ private fun DefaultAppIcon() {
         Icon(
             imageVector = Icons.Default.Android,
             contentDescription = null,
-            tint = AmberPrimary,
-            modifier = Modifier.size(22.dp)
+            tint = TextSecondary,
+            modifier = Modifier.size(24.dp)
         )
     }
 }

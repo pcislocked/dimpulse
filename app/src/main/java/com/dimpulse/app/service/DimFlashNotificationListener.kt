@@ -10,7 +10,6 @@ import android.util.Log
 import com.dimpulse.app.DimPulseApp
 import com.dimpulse.app.data.model.AlertImportanceFilter
 import com.dimpulse.app.data.model.FlashPattern
-import com.dimpulse.app.data.model.FlashStyle
 import com.dimpulse.app.data.model.GlobalFlashSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -125,22 +124,25 @@ class DimFlashNotificationListener : NotificationListenerService() {
                 return@launch
             }
 
-            val flashStyle = appConfig?.flashStyle ?: globalSettings.defaultFlashStyle
+            val preset = appConfig?.profilePreset ?: globalSettings.defaultProfilePreset
             val repeatCount = appConfig?.repeatCount ?: globalSettings.defaultRepeatCount
             val strengthLevel = appConfig?.strengthLevel ?: globalSettings.defaultStrength
             val repeatIntervalSec = appConfig?.repeatIntervalSeconds ?: globalSettings.repeatIntervalSeconds
-            val breathingDuration = appConfig?.breathingDurationMs ?: globalSettings.breathingDurationMs
-            val onDuration = appConfig?.customOnDurationMs ?: 100L
-            val offDuration = appConfig?.customOffDurationMs ?: 120L
+            val fadeIn = appConfig?.fadeInMs ?: globalSettings.defaultFadeInMs
+            val stayOn = appConfig?.stayOnMs ?: globalSettings.defaultStayOnMs
+            val fadeOut = appConfig?.fadeOutMs ?: globalSettings.defaultFadeOutMs
+            val gap = appConfig?.gapMs ?: globalSettings.defaultGapMs
+
             val flashPattern = FlashPattern(
-                style = flashStyle,
+                preset = preset,
                 repeatCount = repeatCount,
-                breathingDurationMs = breathingDuration,
-                onDurationMs = onDuration,
-                offDurationMs = offDuration
+                fadeInMs = fadeIn,
+                stayOnMs = stayOn,
+                fadeOutMs = fadeOut,
+                gapMs = gap
             )
 
-            Log.i(tag, "Dispatching ambient LED pulse for $packageName: $flashStyle x$repeatCount at level $strengthLevel (${breathingDuration}ms)")
+            Log.i(tag, "Dispatching ambient LED pulse for $packageName: ${preset.title} x$repeatCount at level $strengthLevel (FadeIn:${fadeIn}ms, On:${stayOn}ms, FadeOut:${fadeOut}ms, Gap:${gap}ms)")
             app.pulseEngine.triggerPattern(flashPattern, strengthLevel)
 
             // Optional repeat nag for missed alerts if configured

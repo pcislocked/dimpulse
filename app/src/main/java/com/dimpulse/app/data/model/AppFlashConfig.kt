@@ -7,15 +7,16 @@ data class AppFlashConfig(
     val packageName: String,
     val appName: String,
     val isEnabled: Boolean = true,
-    val flashStyle: FlashStyle = FlashStyle.BREATHING,
-    val repeatCount: Int = 1,
-    val strengthLevel: Int = 1,
-    val breathingDurationMs: Long? = null,
+    val profilePreset: LightProfilePreset? = null,
+    val repeatCount: Int? = null,
+    val strengthLevel: Int? = null,
+    val fadeInMs: Long? = null,
+    val stayOnMs: Long? = null,
+    val fadeOutMs: Long? = null,
+    val gapMs: Long? = null,
     val repeatIntervalSeconds: Int = 0,
     val cooldownSeconds: Int? = null,
     val bypassDnd: Boolean = false,
     val triggerOrientation: TriggerOrientation? = null,
-    val alertImportanceFilter: AlertImportanceFilter? = null,
-    val customOnDurationMs: Long = 100L,
-    val customOffDurationMs: Long = 120L
+    val alertImportanceFilter: AlertImportanceFilter? = null
 )

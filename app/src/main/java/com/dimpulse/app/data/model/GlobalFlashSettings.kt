@@ -5,9 +5,13 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class GlobalFlashSettings(
     val masterEnabled: Boolean = true,
-    val defaultFlashStyle: FlashStyle = FlashStyle.BREATHING,
+    val defaultProfilePreset: LightProfilePreset = LightProfilePreset.BREATHING,
     val defaultRepeatCount: Int = 1,
     val defaultStrength: Int = 1,
+    val defaultFadeInMs: Long = 200L,
+    val defaultStayOnMs: Long = 30L,
+    val defaultFadeOutMs: Long = 200L,
+    val defaultGapMs: Long = 120L,
     val onlyWhenScreenOff: Boolean = true,
     val triggerOrientation: TriggerOrientation = TriggerOrientation.EXCEPT_IN_POCKET,
     val alertImportanceFilter: AlertImportanceFilter = AlertImportanceFilter.ONLY_ALERTING,
@@ -15,7 +19,6 @@ data class GlobalFlashSettings(
     val quietHoursEnabled: Boolean = false,
     val quietHoursStartMinutes: Int = 22 * 60, // 22:00
     val quietHoursEndMinutes: Int = 7 * 60,    // 07:00
-    val breathingDurationMs: Long = 400L,
     val repeatIntervalSeconds: Int = 0,
     val cooldownSeconds: Int = 3
 )

@@ -96,8 +96,9 @@ fun DashboardScreen(
             }
         )
 
-        // Live Test Drive Studio (Playground)
+        // Lighting Lab & Playground
         LivePreviewCard(
+            globalSettings = globalSettings,
             maxStrengthLevel = hardwareInfo.maxStrengthLevel,
             isTesting = isTesting,
             onTestClick = { pattern, strength ->
@@ -106,13 +107,17 @@ fun DashboardScreen(
             onStopClick = {
                 mainViewModel.stopTestPulse()
             },
-            onApplyAsDefault = { style, count, strength, durationMs ->
+            onApplyAsDefault = { preset, count, strength, fadeIn, stayOn, fadeOut, gap, cooldown ->
                 mainViewModel.updateSettings {
                     it.copy(
-                        defaultFlashStyle = style,
+                        defaultProfilePreset = preset,
                         defaultRepeatCount = count,
                         defaultStrength = strength,
-                        breathingDurationMs = durationMs
+                        defaultFadeInMs = fadeIn,
+                        defaultStayOnMs = stayOn,
+                        defaultFadeOutMs = fadeOut,
+                        defaultGapMs = gap,
+                        cooldownSeconds = cooldown
                     )
                 }
             }

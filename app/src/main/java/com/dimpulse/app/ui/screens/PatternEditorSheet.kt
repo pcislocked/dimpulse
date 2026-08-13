@@ -1,11 +1,7 @@
 package com.dimpulse.app.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,9 +16,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.FlashOn
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -31,16 +23,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -50,52 +38,34 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.dimpulse.app.data.model.AlertImportanceFilter
 import com.dimpulse.app.data.model.AppFlashConfig
 import com.dimpulse.app.data.model.FlashPattern
-import com.dimpulse.app.data.model.FlashStyle
-import com.dimpulse.app.data.model.TriggerOrientation
+import com.dimpulse.app.data.model.GlobalFlashSettings
+import com.dimpulse.app.ui.components.LedConfigurationEditor
 import com.dimpulse.app.ui.theme.AccentError
 import com.dimpulse.app.ui.theme.AmberPrimary
-import com.dimpulse.app.ui.theme.DarkBackground
-import com.dimpulse.app.ui.theme.DarkBorder
 import com.dimpulse.app.ui.theme.DarkSurface
 import com.dimpulse.app.ui.theme.DarkSurfaceVariant
 import com.dimpulse.app.ui.theme.TextMuted
 import com.dimpulse.app.ui.theme.TextPrimary
 import com.dimpulse.app.ui.theme.TextSecondary
 import com.dimpulse.app.ui.viewmodel.InstalledAppItem
-import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PatternEditorSheet(
     appItem: InstalledAppItem,
+    globalSettings: GlobalFlashSettings,
     maxStrengthLevel: Int,
-    defaultFlashStyle: FlashStyle,
-    defaultRepeatCount: Int,
-    defaultStrength: Int,
-    defaultBreathingDurationMs: Long = 350L,
+    isTesting: Boolean = false,
     onDismiss: () -> Unit,
     onSave: (AppFlashConfig) -> Unit,
     onReset: (String) -> Unit,
-    onTestPattern: (FlashPattern, Int) -> Unit
+    onTestPattern: (FlashPattern, Int) -> Unit,
+    onStopTestPattern: () -> Unit = {}
 ) {
     val existing = appItem.config
     var isEnabled by remember { mutableStateOf(existing?.isEnabled ?: true) }
-    var selectedFlashStyle by remember { mutableStateOf(existing?.flashStyle ?: defaultFlashStyle) }
-    var repeatCount by remember { mutableIntStateOf(existing?.repeatCount ?: defaultRepeatCount) }
-    var strengthLevel by remember {
-        mutableFloatStateOf((existing?.strengthLevel ?: defaultStrength).toFloat())
-    }
-    var breathingDurationMs by remember { mutableStateOf(existing?.breathingDurationMs) }
-    var repeatIntervalSec by remember { mutableIntStateOf(existing?.repeatIntervalSeconds ?: 0) }
-    var bypassDnd by remember { mutableStateOf(existing?.bypassDnd ?: false) }
-    var triggerOrientation by remember { mutableStateOf(existing?.triggerOrientation) }
-    var alertImportanceFilter by remember { mutableStateOf(existing?.alertImportanceFilter) }
-    var cooldownSeconds by remember { mutableStateOf(existing?.cooldownSeconds) }
-
-    val safeMax = maxStrengthLevel.coerceAtLeast(1)
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
@@ -147,7 +117,7 @@ fun PatternEditorSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Enable App Toggle
             Row(
@@ -185,384 +155,62 @@ fun PatternEditorSheet(
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // 1. Light Waveform Style Selector
-            Text(
-                text = "LIGHT WAVEFORM STYLE",
-                style = MaterialTheme.typography.labelSmall,
-                color = TextMuted,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                FlashStyle.entries.forEach { style ->
-                    val isSelected = style == selectedFlashStyle
-                    val bg = if (isSelected) AmberPrimary else DarkSurfaceVariant
-                    val textCol = if (isSelected) DarkBackground else TextPrimary
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(bg)
-                            .border(1.dp, if (isSelected) AmberPrimary else DarkBorder, RoundedCornerShape(10.dp))
-                            .clickable { selectedFlashStyle = style }
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
-                    ) {
-                        Text(
-                            text = style.title,
-                            fontSize = 12.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = textCol
-                        )
-                    }
-                }
-            }
-
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 2. Pulse Multiplier Selector
-            Text(
-                text = "PULSE MULTIPLIER",
-                style = MaterialTheme.typography.labelSmall,
-                color = TextMuted,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                listOf(
-                    1 to "1x",
-                    2 to "2x",
-                    3 to "3x",
-                    4 to "4x"
-                ).forEach { (count, label) ->
-                    val isSelected = count == repeatCount
-                    val bg = if (isSelected) AmberPrimary else DarkSurfaceVariant
-                    val textCol = if (isSelected) DarkBackground else TextPrimary
-
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(bg)
-                            .border(1.dp, if (isSelected) AmberPrimary else DarkBorder, RoundedCornerShape(10.dp))
-                            .clickable { repeatCount = count }
-                            .padding(vertical = 8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = label,
-                            fontSize = 12.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = textCol
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 3. Waveform Speed & Duration
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "WAVEFORM SPEED (DURATION)",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = TextMuted,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = if (breathingDurationMs == null) "Default (${defaultBreathingDurationMs}ms)" else "${breathingDurationMs}ms",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = AmberPrimary,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                listOf(
-                    null to "Default",
-                    200L to "Snappy (200ms)",
-                    350L to "Balanced (350ms)",
-                    600L to "Ambient (600ms)"
-                ).forEach { (dur, label) ->
-                    val isSelected = breathingDurationMs == dur
-                    val bg = if (isSelected) AmberPrimary else DarkSurfaceVariant
-                    val textCol = if (isSelected) DarkBackground else TextPrimary
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(bg)
-                            .border(1.dp, if (isSelected) AmberPrimary else DarkBorder, RoundedCornerShape(10.dp))
-                            .clickable { breathingDurationMs = dur }
-                            .padding(horizontal = 12.dp, vertical = 7.dp)
-                    ) {
-                        Text(
-                            text = label,
-                            fontSize = 12.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = textCol
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // 4. Brightness Intensity Slider
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "BRIGHTNESS INTENSITY",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = TextMuted,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Level ${strengthLevel.roundToInt()} of $safeMax",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = AmberPrimary,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            Slider(
-                value = strengthLevel,
-                onValueChange = { strengthLevel = it },
-                valueRange = 1f..safeMax.toFloat(),
-                steps = if (safeMax > 1) safeMax - 2 else 0,
-                colors = SliderDefaults.colors(
-                    thumbColor = AmberPrimary,
-                    activeTrackColor = AmberPrimary,
-                    inactiveTrackColor = DarkSurfaceVariant
-                ),
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 5. Notification Importance / Sound Filter
-            Text(
-                text = "ALERT IMPORTANCE FILTER",
-                style = MaterialTheme.typography.labelSmall,
-                color = TextMuted,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                listOf(
-                    null to "Default (Global)",
-                    AlertImportanceFilter.ONLY_ALERTING to "Only Loud",
-                    AlertImportanceFilter.ALL_INCLUDING_SILENT to "All (Inc. Silent)",
-                    AlertImportanceFilter.NONE to "None (Mute)"
-                ).forEach { (filterOption, label) ->
-                    val isSelected = alertImportanceFilter == filterOption
-                    val bg = if (isSelected) AmberPrimary else DarkSurfaceVariant
-                    val textCol = if (isSelected) DarkBackground else TextPrimary
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(bg)
-                            .border(1.dp, if (isSelected) AmberPrimary else DarkBorder, RoundedCornerShape(10.dp))
-                            .clickable { alertImportanceFilter = filterOption }
-                            .padding(horizontal = 12.dp, vertical = 7.dp)
-                    ) {
-                        Text(
-                            text = label,
-                            fontSize = 12.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = textCol
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 6. Burst Rate Limit / Cooldown Debounce
-            Text(
-                text = "BURST RATE LIMIT (COOLDOWN)",
-                style = MaterialTheme.typography.labelSmall,
-                color = TextMuted,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                listOf(
-                    null to "Default (Global)",
-                    0 to "Off",
-                    1 to "1s",
-                    2 to "2s",
-                    3 to "3s",
-                    5 to "5s",
-                    10 to "10s"
-                ).forEach { (cdOption, label) ->
-                    val isSelected = cooldownSeconds == cdOption
-                    val bg = if (isSelected) AmberPrimary else DarkSurfaceVariant
-                    val textCol = if (isSelected) DarkBackground else TextPrimary
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(bg)
-                            .border(1.dp, if (isSelected) AmberPrimary else DarkBorder, RoundedCornerShape(10.dp))
-                            .clickable { cooldownSeconds = cdOption }
-                            .padding(horizontal = 12.dp, vertical = 7.dp)
-                    ) {
-                        Text(
-                            text = label,
-                            fontSize = 12.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = textCol
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 7. Bypass DND Switch
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(DarkSurfaceVariant)
-                    .padding(14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Bypass Do Not Disturb",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = TextPrimary
-                    )
-                    Text(
-                        text = "Flash even when priority/silent DND is active",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary,
-                        fontSize = 12.sp
-                    )
-                }
-
-                Switch(
-                    checked = bypassDnd,
-                    onCheckedChange = { bypassDnd = it },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = AmberPrimary,
-                        checkedTrackColor = DarkSurface,
-                        uncheckedThumbColor = TextMuted,
-                        uncheckedTrackColor = DarkSurface
-                    )
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Test Pattern Action
-            OutlinedButton(
-                onClick = {
-                    val pattern = FlashPattern.defaultFor(
-                        style = selectedFlashStyle,
-                        repeatCount = repeatCount,
-                        breathingDurationMs = breathingDurationMs ?: defaultBreathingDurationMs
-                    )
-                    onTestPattern(pattern, strengthLevel.roundToInt())
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp)
-            ) {
-                Icon(imageVector = Icons.Default.FlashOn, contentDescription = null, tint = AmberPrimary)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Test This App Profile", color = TextPrimary)
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Save and Reset Actions
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                if (existing != null) {
-                    OutlinedButton(
-                        onClick = { onReset(appItem.packageName) },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = AccentError),
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.weight(0.4f)
-                    ) {
-                        Icon(imageVector = Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Reset", fontSize = 13.sp)
-                    }
-                }
-
-                Button(
-                    onClick = {
-                        val config = AppFlashConfig(
-                            packageName = appItem.packageName,
-                            appName = appItem.appName,
-                            isEnabled = isEnabled,
-                            flashStyle = selectedFlashStyle,
-                            repeatCount = repeatCount,
-                            strengthLevel = strengthLevel.roundToInt(),
-                            breathingDurationMs = breathingDurationMs,
-                            repeatIntervalSeconds = repeatIntervalSec,
-                            cooldownSeconds = cooldownSeconds,
-                            bypassDnd = bypassDnd,
-                            triggerOrientation = triggerOrientation,
-                            alertImportanceFilter = alertImportanceFilter
-                        )
-                        onSave(config)
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AmberPrimary,
-                        contentColor = DarkBackground
-                    ),
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.weight(if (existing != null) 0.6f else 1f)
+            // Reset to Global Defaults button (if custom config exists)
+            if (existing != null) {
+                OutlinedButton(
+                    onClick = { onReset(appItem.packageName) },
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = AccentError),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(imageVector = Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Save App Rule", fontWeight = FontWeight.Bold)
+                    Icon(imageVector = Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.padding(horizontal = 4.dp))
+                    Text("Reset to Global Settings Defaults", fontSize = 12.sp)
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
             }
+
+            // Shared Unified LED Configuration Editor
+            LedConfigurationEditor(
+                initialPreset = existing?.profilePreset ?: globalSettings.defaultProfilePreset,
+                initialRepeatCount = existing?.repeatCount ?: globalSettings.defaultRepeatCount,
+                initialStrength = existing?.strengthLevel ?: globalSettings.defaultStrength,
+                maxStrengthLevel = maxStrengthLevel,
+                initialFadeInMs = existing?.fadeInMs ?: globalSettings.defaultFadeInMs,
+                initialStayOnMs = existing?.stayOnMs ?: globalSettings.defaultStayOnMs,
+                initialFadeOutMs = existing?.fadeOutMs ?: globalSettings.defaultFadeOutMs,
+                initialGapMs = existing?.gapMs ?: globalSettings.defaultGapMs,
+                initialCooldownSeconds = existing?.cooldownSeconds ?: globalSettings.cooldownSeconds,
+                initialImportanceFilter = existing?.alertImportanceFilter ?: globalSettings.alertImportanceFilter,
+                initialBypassDnd = existing?.bypassDnd ?: false,
+                showDndBypassToggle = true,
+                showImportanceFilter = true,
+                isTesting = isTesting,
+                onTestClick = onTestPattern,
+                onStopTestClick = onStopTestPattern,
+                saveButtonText = "Save App Rule",
+                onSaveClick = { preset, repeatCount, strength, fadeInMs, stayOnMs, fadeOutMs, gapMs, cooldown, filter, bypass ->
+                    val newConfig = AppFlashConfig(
+                        packageName = appItem.packageName,
+                        appName = appItem.appName,
+                        isEnabled = isEnabled,
+                        profilePreset = preset,
+                        repeatCount = repeatCount,
+                        strengthLevel = strength,
+                        fadeInMs = fadeInMs,
+                        stayOnMs = stayOnMs,
+                        fadeOutMs = fadeOutMs,
+                        gapMs = gapMs,
+                        cooldownSeconds = cooldown,
+                        alertImportanceFilter = filter,
+                        bypassDnd = bypass
+                    )
+                    onSave(newConfig)
+                }
+            )
         }
     }
 }
