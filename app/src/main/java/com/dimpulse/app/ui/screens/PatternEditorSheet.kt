@@ -49,6 +49,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dimpulse.app.data.model.AlertImportanceFilter
 import com.dimpulse.app.data.model.AppFlashConfig
 import com.dimpulse.app.data.model.FlashPattern
 import com.dimpulse.app.data.model.PatternType
@@ -87,6 +88,7 @@ fun PatternEditorSheet(
     var repeatIntervalSec by remember { mutableIntStateOf(existing?.repeatIntervalSeconds ?: 0) }
     var bypassDnd by remember { mutableStateOf(existing?.bypassDnd ?: false) }
     var triggerOrientation by remember { mutableStateOf(existing?.triggerOrientation) }
+    var alertImportanceFilter by remember { mutableStateOf(existing?.alertImportanceFilter) }
 
     val safeMax = maxStrengthLevel.coerceAtLeast(1)
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -283,6 +285,51 @@ fun PatternEditorSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Notification Importance / Sound Filter
+            Text(
+                text = "ALERT IMPORTANCE FILTER",
+                style = MaterialTheme.typography.labelSmall,
+                color = TextMuted,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf(
+                    null to "Default (Loud Only)",
+                    AlertImportanceFilter.ONLY_ALERTING to "Only Loud",
+                    AlertImportanceFilter.ALL_INCLUDING_SILENT to "All (Inc. Silent)",
+                    AlertImportanceFilter.NONE to "None (Mute)"
+                ).forEach { (filterOption, label) ->
+                    val isSelected = alertImportanceFilter == filterOption
+                    val bg = if (isSelected) AmberPrimary else DarkSurfaceVariant
+                    val textCol = if (isSelected) DarkBackground else TextPrimary
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(bg)
+                            .border(1.dp, if (isSelected) AmberPrimary else DarkBorder, RoundedCornerShape(10.dp))
+                            .clickable { alertImportanceFilter = filterOption }
+                            .padding(horizontal = 12.dp, vertical = 7.dp)
+                    ) {
+                        Text(
+                            text = label,
+                            fontSize = 12.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = textCol
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Bypass DND Switch
             Row(
                 modifier = Modifier
@@ -366,7 +413,8 @@ fun PatternEditorSheet(
                             repeatCount = repeatCount,
                             repeatIntervalSeconds = repeatIntervalSec,
                             bypassDnd = bypassDnd,
-                            triggerOrientation = triggerOrientation
+                            triggerOrientation = triggerOrientation,
+                            alertImportanceFilter = alertImportanceFilter
                         )
                         onSave(config)
                     },

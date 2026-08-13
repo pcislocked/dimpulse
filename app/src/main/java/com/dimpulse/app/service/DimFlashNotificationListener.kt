@@ -8,11 +8,13 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
 import com.dimpulse.app.DimPulseApp
+import com.dimpulse.app.data.model.AlertImportanceFilter
 import com.dimpulse.app.data.model.FlashPattern
 import com.dimpulse.app.data.model.GlobalFlashSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.concurrent.ConcurrentHashMap
@@ -21,24 +23,13 @@ class DimFlashNotificationListener : NotificationListenerService() {
 
     private val tag = "DimPulse_NLS"
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-
-    private var serviceConnectedTime = 0L
-    private val lastTriggerTimestamp = ConcurrentHashMap<String, Long>()
-
-    // Noisy system internal packages that should not trigger flash unless explicitly configured
-    private val defaultIgnoredPackages = setOf(
-        "android",
-        "com.android.systemui",
-        "com.google.android.gms",
-        "com.google.android.googlequicksearchbox",
-        "com.google.android.as",
-        "com.android.providers.downloads"
-    )
+    private var connectedTimestampMs = 0L
+    private val lastTriggerTimePerPackage = ConcurrentHashMap<String, Long>()
 
     override fun onListenerConnected() {
         super.onListenerConnected()
-        serviceConnectedTime = System.currentTimeMillis()
-        Log.i(tag, "DimFlashNotificationListener connected. Stale notifications before $serviceConnectedTime will be ignored.")
+        connectedTimestampMs = System.currentTimeMillis()
+        Log.i(tag, "DimFlashNotificationListener connected successfully at $connectedTimestampMs")
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
@@ -46,48 +37,30 @@ class DimFlashNotificationListener : NotificationListenerService() {
         if (sbn == null) return
 
         val now = System.currentTimeMillis()
-
-        // 1. Drop Stale Notifications from initial batch / before service connection
-        if (serviceConnectedTime == 0L || sbn.postTime < (serviceConnectedTime - 1000L)) {
-            return
-        }
-
-        // 2. Drop old notifications (> 3 seconds old)
-        if (now - sbn.postTime > 3000L) {
+        // Drop any stale backlog notifications from before the listener connected
+        if (sbn.postTime < connectedTimestampMs - 1000L) {
+            Log.d(tag, "Dropping stale notification from ${sbn.packageName}")
             return
         }
 
         val app = application as? DimPulseApp ?: return
         val globalSettings = app.repository.globalSettings.value
 
-        // 3. Master enable switch
+        // 1. Master enable switch
         if (!globalSettings.masterEnabled) {
             return
         }
 
-        val packageName = sbn.packageName ?: return
-
-        // 4. Ongoing / foreground service / group summary filter
+        // 2. Ongoing / foreground service / group summary filter
         val notification = sbn.notification ?: return
         if (sbn.isOngoing || (notification.flags and Notification.FLAG_ONGOING_EVENT) != 0) {
             return
         }
         if ((notification.flags and Notification.FLAG_GROUP_SUMMARY) != 0) {
-            return
+            return // Skip summary header to avoid double flash
         }
 
-        // 5. Default ignored background system daemons (unless user explicitly added a custom rule)
-        val appConfig = app.repository.getConfigForPackage(packageName)
-        if (appConfig == null && defaultIgnoredPackages.contains(packageName)) {
-            return
-        }
-
-        // 6. Per-app enabled switch
-        if (appConfig != null && !appConfig.isEnabled) {
-            return
-        }
-
-        // 7. Screen state filter (Only flash when screen is OFF)
+        // 3. Screen state filter
         if (globalSettings.onlyWhenScreenOff) {
             val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
             if (powerManager?.isInteractive == true) {
@@ -95,14 +68,29 @@ class DimFlashNotificationListener : NotificationListenerService() {
             }
         }
 
-        // 8. Debounce / Cooldown filter (prevent rapid re-triggering within 3.5 seconds for same app)
-        val lastTrigger = lastTriggerTimestamp[packageName] ?: 0L
-        if (now - lastTrigger < 3500L) {
-            Log.d(tag, "Debounced notification flash for $packageName")
+        val packageName = sbn.packageName ?: return
+
+        // 4. Per-app configuration check
+        val appConfig = app.repository.getConfigForPackage(packageName)
+        if (appConfig != null && !appConfig.isEnabled) {
             return
         }
 
-        // 9. Do Not Disturb (DND) filter
+        // 5. Silent vs Alerting / Loud Importance Filter
+        val alertFilter = appConfig?.alertImportanceFilter ?: globalSettings.alertImportanceFilter
+        if (alertFilter == AlertImportanceFilter.NONE) {
+            return
+        }
+
+        if (alertFilter == AlertImportanceFilter.ONLY_ALERTING) {
+            val isAlerting = isNotificationAlerting(sbn)
+            if (!isAlerting) {
+                Log.d(tag, "Dropping silent/background notification from $packageName (Channel importance is silent)")
+                return
+            }
+        }
+
+        // 6. Do Not Disturb (DND) filter
         if (globalSettings.respectDnd) {
             val bypassDnd = appConfig?.bypassDnd ?: false
             if (!bypassDnd && isDndActive()) {
@@ -110,15 +98,20 @@ class DimFlashNotificationListener : NotificationListenerService() {
             }
         }
 
-        // 10. Quiet Hours filter
+        // 7. Quiet Hours filter
         if (globalSettings.quietHoursEnabled && isInQuietHours(globalSettings)) {
             return
         }
 
-        // Mark trigger time
-        lastTriggerTimestamp[packageName] = now
+        // 8. Package Cooldown Debounce (e.g. 1.5s per package to prevent flood)
+        val lastTime = lastTriggerTimePerPackage[packageName] ?: 0L
+        if (now - lastTime < 1500L) {
+            Log.d(tag, "Debouncing rapid notification burst for $packageName")
+            return
+        }
+        lastTriggerTimePerPackage[packageName] = now
 
-        // 11. Orientation & Table / Pocket Gating & Pulse Dispatch
+        // 9. Orientation & Table / Pocket Gating & Pulse Dispatch
         serviceScope.launch {
             val orientationMode = appConfig?.triggerOrientation ?: globalSettings.triggerOrientation
             val allowed = app.proximityHelper.shouldAllowFlash(orientationMode)
@@ -132,10 +125,46 @@ class DimFlashNotificationListener : NotificationListenerService() {
             val patternType = appConfig?.patternType ?: globalSettings.defaultPattern
             val strengthLevel = appConfig?.strengthLevel ?: globalSettings.defaultStrength
             val repeatCount = appConfig?.repeatCount ?: 1
+            val repeatIntervalSec = appConfig?.repeatIntervalSeconds ?: globalSettings.repeatIntervalSeconds
             val flashPattern = FlashPattern.defaultFor(patternType).copy(repeatCount = repeatCount)
 
             Log.i(tag, "Dispatching ambient LED pulse for $packageName: $patternType at level $strengthLevel")
             app.pulseEngine.triggerPattern(flashPattern, strengthLevel)
+
+            // Optional repeat nag for missed alerts if configured
+            if (repeatIntervalSec > 0) {
+                launch {
+                    delay(repeatIntervalSec * 1000L)
+                    val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
+                    if (powerManager?.isInteractive == false) {
+                        app.pulseEngine.triggerPattern(flashPattern, strengthLevel)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun isNotificationAlerting(sbn: StatusBarNotification): Boolean {
+        return try {
+            val ranking = Ranking()
+            val rankingMap = currentRanking
+            if (rankingMap != null && rankingMap.getRanking(sbn.key, ranking)) {
+                val importance = ranking.importance
+                val channel = ranking.channel
+                val channelImportance = channel?.importance ?: NotificationManager.IMPORTANCE_DEFAULT
+                // Alerting if importance >= IMPORTANCE_DEFAULT (3) and channel is not silent
+                importance >= NotificationManager.IMPORTANCE_DEFAULT && channelImportance >= NotificationManager.IMPORTANCE_DEFAULT
+            } else {
+                val channelId = sbn.notification.channelId
+                // Fallback: check legacy flags or assume alerting if unknown
+                val hasSoundOrVibrate = sbn.notification.sound != null ||
+                        sbn.notification.vibrate != null ||
+                        (sbn.notification.defaults and (Notification.DEFAULT_SOUND or Notification.DEFAULT_VIBRATE)) != 0
+                hasSoundOrVibrate || channelId != null
+            }
+        } catch (e: Exception) {
+            Log.w(tag, "Error checking notification importance: ${e.message}")
+            true
         }
     }
 

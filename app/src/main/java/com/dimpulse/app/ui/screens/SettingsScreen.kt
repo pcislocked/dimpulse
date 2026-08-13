@@ -49,6 +49,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dimpulse.app.data.model.AlertImportanceFilter
 import com.dimpulse.app.data.model.PatternType
 import com.dimpulse.app.data.model.TriggerOrientation
 import com.dimpulse.app.ui.theme.AmberPrimary
@@ -141,9 +142,70 @@ fun SettingsScreen(
                     }
                 }
             }
+        // Section 2: Alert Sound & Silent Filter
+        SectionHeader(title = "ALERT IMPORTANCE FILTER")
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, DarkBorder, RoundedCornerShape(18.dp)),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = DarkSurface)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Notification Sound Level Filtering",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = TextPrimary
+                )
+                Text(
+                    text = "Mute silent background syncs while preserving alerts when phone ringer is muted",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary,
+                    fontSize = 12.sp
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                AlertImportanceFilter.entries.forEach { filter ->
+                    val isSelected = filter == globalSettings.alertImportanceFilter
+                    val bg = if (isSelected) AmberPrimary.copy(alpha = 0.15f) else DarkSurfaceVariant
+                    val border = if (isSelected) AmberPrimary else DarkBorder
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(bg)
+                            .border(1.dp, border, RoundedCornerShape(12.dp))
+                            .clickable {
+                                mainViewModel.updateSettings { it.copy(alertImportanceFilter = filter) }
+                            }
+                            .padding(12.dp)
+                    ) {
+                        Column {
+                            Text(
+                                text = filter.title,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = if (isSelected) AmberPrimary else TextPrimary,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                fontSize = 13.sp
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = filter.description,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextSecondary,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                }
+            }
         }
 
-        // Section 2: Global Defaults & Waveform Tuning
+        // Section 3: Global Defaults & Waveform Tuning
         SectionHeader(title = "DEFAULT WAVEFORM & BRIGHTNESS")
 
         Card(
