@@ -7,10 +7,12 @@ data class AppFlashConfig(
     val packageName: String,
     val appName: String,
     val isEnabled: Boolean = true,
-    val patternType: PatternType = PatternType.DOUBLE_PULSE,
+    val patternType: PatternType = PatternType.BREATHING,
     val strengthLevel: Int = 1,
     val repeatCount: Int = 1,
+    val repeatIntervalSeconds: Int = 0,
     val bypassDnd: Boolean = false,
+    val triggerOrientation: TriggerOrientation? = null, // null = inherit global
     val customOnDurationMs: Long = 100L,
     val customOffDurationMs: Long = 120L
 )

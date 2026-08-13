@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.sp
 import com.dimpulse.app.data.model.AppFlashConfig
 import com.dimpulse.app.data.model.FlashPattern
 import com.dimpulse.app.data.model.PatternType
+import com.dimpulse.app.data.model.TriggerOrientation
 import com.dimpulse.app.ui.theme.AccentError
 import com.dimpulse.app.ui.theme.AmberPrimary
 import com.dimpulse.app.ui.theme.DarkBackground
@@ -83,7 +84,9 @@ fun PatternEditorSheet(
         mutableFloatStateOf((existing?.strengthLevel ?: defaultStrength).toFloat())
     }
     var repeatCount by remember { mutableIntStateOf(existing?.repeatCount ?: 1) }
+    var repeatIntervalSec by remember { mutableIntStateOf(existing?.repeatIntervalSeconds ?: 0) }
     var bypassDnd by remember { mutableStateOf(existing?.bypassDnd ?: false) }
+    var triggerOrientation by remember { mutableStateOf(existing?.triggerOrientation) }
 
     val safeMax = maxStrengthLevel.coerceAtLeast(1)
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -245,6 +248,41 @@ fun PatternEditorSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Pulse Repeat Repetitions
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "REPETITIONS PER ALERT",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextMuted,
+                    fontWeight = FontWeight.Bold
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(1, 2, 3, 4).forEach { count ->
+                        val isSel = repeatCount == count
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isSel) AmberPrimary else DarkSurfaceVariant)
+                                .clickable { repeatCount = count }
+                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                        ) {
+                            Text(
+                                text = "$count×",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSel) DarkBackground else TextSecondary
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Bypass DND Switch
             Row(
                 modifier = Modifier
@@ -326,7 +364,9 @@ fun PatternEditorSheet(
                             patternType = selectedPattern,
                             strengthLevel = strengthLevel.roundToInt(),
                             repeatCount = repeatCount,
-                            bypassDnd = bypassDnd
+                            repeatIntervalSeconds = repeatIntervalSec,
+                            bypassDnd = bypassDnd,
+                            triggerOrientation = triggerOrientation
                         )
                         onSave(config)
                     },

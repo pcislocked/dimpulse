@@ -30,14 +30,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import com.dimpulse.app.ui.screens.AppListScreen
 import com.dimpulse.app.ui.screens.DashboardScreen
 import com.dimpulse.app.ui.screens.SettingsScreen
 import com.dimpulse.app.ui.theme.AmberPrimary
 import com.dimpulse.app.ui.theme.DarkBackground
-import com.dimpulse.app.ui.theme.DarkBorder
 import com.dimpulse.app.ui.theme.DarkSurface
-import com.dimpulse.app.ui.theme.DarkSurfaceVariant
 import com.dimpulse.app.ui.theme.DimPulseTheme
 import com.dimpulse.app.ui.theme.TextMuted
 import com.dimpulse.app.ui.theme.TextPrimary
@@ -103,7 +102,7 @@ fun MainRootScreen(
         bottomBar = {
             NavigationBar(
                 containerColor = DarkSurface,
-                tonalElevation = androidx.compose.ui.unit.dp
+                tonalElevation = 3.dp
             ) {
                 NavigationTab.entries.forEach { tab ->
                     val isSelected = currentTab == tab

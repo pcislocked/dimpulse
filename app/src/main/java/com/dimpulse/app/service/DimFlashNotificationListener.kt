@@ -13,6 +13,7 @@ import com.dimpulse.app.data.model.GlobalFlashSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
@@ -47,7 +48,7 @@ class DimFlashNotificationListener : NotificationListenerService() {
             return // Skip summary header to avoid double flash
         }
 
-        // 3. Screen state filter (Suppress if user is actively using device)
+        // 3. Screen state filter
         if (globalSettings.onlyWhenScreenOff) {
             val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
             if (powerManager?.isInteractive == true) {
@@ -76,23 +77,37 @@ class DimFlashNotificationListener : NotificationListenerService() {
             return
         }
 
-        // 7. Sensor Gating (Pocket & Face-Down) & Pulse Dispatch
+        // 7. Orientation & Table / Pocket Gating & Pulse Dispatch
         serviceScope.launch {
-            if (globalSettings.proximitySensorEnabled) {
-                val isCovered = app.proximityHelper.isCoveredOrFaceDown(150L)
-                if (isCovered) {
-                    Log.d(tag, "Notification flash suppressed: proximity sensor occluded (pocket/face-down)")
-                    return@launch
-                }
+            val orientationMode = appConfig?.triggerOrientation ?: globalSettings.triggerOrientation
+            val allowed = app.proximityHelper.shouldAllowFlash(orientationMode)
+
+            if (!allowed) {
+                Log.d(tag, "Flash suppressed by orientation/pocket filter for mode $orientationMode")
+                return@launch
             }
 
             // Determine pattern and intensity
             val patternType = appConfig?.patternType ?: globalSettings.defaultPattern
             val strengthLevel = appConfig?.strengthLevel ?: globalSettings.defaultStrength
-            val flashPattern = FlashPattern.defaultFor(patternType)
+            val repeatCount = appConfig?.repeatCount ?: 1
+            val repeatIntervalSec = appConfig?.repeatIntervalSeconds ?: globalSettings.repeatIntervalSeconds
+            val flashPattern = FlashPattern.defaultFor(patternType).copy(repeatCount = repeatCount)
 
             Log.i(tag, "Dispatching ambient LED pulse for $packageName: $patternType at level $strengthLevel")
             app.pulseEngine.triggerPattern(flashPattern, strengthLevel)
+
+            // Optional repeat nag for missed alerts if configured
+            if (repeatIntervalSec > 0) {
+                launch {
+                    delay(repeatIntervalSec * 1000L)
+                    // Check if still screen off before repeating
+                    val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
+                    if (powerManager?.isInteractive == false) {
+                        app.pulseEngine.triggerPattern(flashPattern, strengthLevel)
+                    }
+                }
+            }
         }
     }
 

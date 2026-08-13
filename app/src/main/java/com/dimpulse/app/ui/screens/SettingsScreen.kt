@@ -24,11 +24,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.DoNotDisturb
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.PrivacyTip
+import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.ScreenLockPortrait
 import androidx.compose.material.icons.filled.Sensors
+import androidx.compose.material.icons.filled.StayCurrentPortrait
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -49,6 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dimpulse.app.data.model.PatternType
+import com.dimpulse.app.data.model.TriggerOrientation
 import com.dimpulse.app.ui.theme.AmberPrimary
 import com.dimpulse.app.ui.theme.DarkBackground
 import com.dimpulse.app.ui.theme.DarkBorder
@@ -78,8 +80,71 @@ fun SettingsScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Section: Global Defaults
-        SectionHeader(title = "GLOBAL DEFAULTS")
+        // Section 1: HiLight Orientation & Trigger Behavior
+        SectionHeader(title = "HILIGHT TRIGGER MODE")
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, DarkBorder, RoundedCornerShape(18.dp)),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = DarkSurface)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Desk & Orientation Gating",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = TextPrimary
+                )
+                Text(
+                    text = "Control when the ambient LED is permitted to flash",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary,
+                    fontSize = 12.sp
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                TriggerOrientation.entries.forEach { orientation ->
+                    val isSelected = orientation == globalSettings.triggerOrientation
+                    val bg = if (isSelected) AmberPrimary.copy(alpha = 0.15f) else DarkSurfaceVariant
+                    val border = if (isSelected) AmberPrimary else DarkBorder
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(bg)
+                            .border(1.dp, border, RoundedCornerShape(12.dp))
+                            .clickable {
+                                mainViewModel.updateSettings { it.copy(triggerOrientation = orientation) }
+                            }
+                            .padding(12.dp)
+                    ) {
+                        Column {
+                            Text(
+                                text = orientation.title,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = if (isSelected) AmberPrimary else TextPrimary,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                fontSize = 13.sp
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = orientation.description,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextSecondary,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Section 2: Global Defaults & Waveform Tuning
+        SectionHeader(title = "DEFAULT WAVEFORM & BRIGHTNESS")
 
         Card(
             modifier = Modifier
@@ -161,11 +226,56 @@ fun SettingsScreen(
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Repeat Nag Interval
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "Missed Alert Reminder",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = if (globalSettings.repeatIntervalSeconds == 0) "Flash once only" else "Re-flash every ${globalSettings.repeatIntervalSeconds}s while locked",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextSecondary,
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf(0, 15, 30, 60).forEach { sec ->
+                            val isSel = globalSettings.repeatIntervalSeconds == sec
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSel) AmberPrimary else DarkSurfaceVariant)
+                                    .clickable {
+                                        mainViewModel.updateSettings { it.copy(repeatIntervalSeconds = sec) }
+                                    }
+                                    .padding(horizontal = 8.dp, vertical = 5.dp)
+                            ) {
+                                Text(
+                                    text = if (sec == 0) "Off" else "${sec}s",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSel) DarkBackground else TextSecondary
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
 
-        // Section: Smart Sensor Filters
-        SectionHeader(title = "SMART SENSOR PIPELINE")
+        // Section 3: Smart Environmental Filters
+        SectionHeader(title = "ENVIRONMENTAL FILTERS")
 
         Card(
             modifier = Modifier
@@ -188,19 +298,6 @@ fun SettingsScreen(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Pocket & Face-down sensor check
-                SettingToggleRow(
-                    icon = Icons.Default.Sensors,
-                    title = "Pocket & Face-Down Detection",
-                    subtitle = "Suppresses flash when the proximity sensor is covered",
-                    checked = globalSettings.proximitySensorEnabled,
-                    onCheckedChange = { checked ->
-                        mainViewModel.updateSettings { it.copy(proximitySensorEnabled = checked) }
-                    }
-                )
-
-                Spacer(modifier = Modifier.height(14.dp))
-
                 // Respect DND
                 SettingToggleRow(
                     icon = Icons.Default.DoNotDisturb,
@@ -218,7 +315,7 @@ fun SettingsScreen(
                 SettingToggleRow(
                     icon = Icons.Default.Bedtime,
                     title = "Quiet Hours Schedule",
-                    subtitle = "Mute or dim flashes during set sleep hours",
+                    subtitle = "Mute flashes during set sleep hours",
                     checked = globalSettings.quietHoursEnabled,
                     onCheckedChange = { checked ->
                         mainViewModel.updateSettings { it.copy(quietHoursEnabled = checked) }
@@ -256,8 +353,8 @@ fun SettingsScreen(
             }
         }
 
-        // Section: Privacy & About
-        SectionHeader(title = "PRIVACY & ABOUT")
+        // Section 4: Privacy & Attribution
+        SectionHeader(title = "PRIVACY & ATTRIBUTION")
 
         Card(
             modifier = Modifier
