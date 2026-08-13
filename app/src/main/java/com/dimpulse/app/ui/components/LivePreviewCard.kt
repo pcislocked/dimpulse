@@ -39,6 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -46,12 +47,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dimpulse.app.data.model.FlashPattern
-import com.dimpulse.app.data.model.PatternType
+import com.dimpulse.app.data.model.FlashStyle
 import com.dimpulse.app.ui.theme.AmberPrimary
 import com.dimpulse.app.ui.theme.AmberSecondary
 import com.dimpulse.app.ui.theme.DarkBackground
@@ -71,7 +71,8 @@ fun LivePreviewCard(
     onStopClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var selectedPatternType by remember { mutableStateOf(PatternType.BREATHING) }
+    var selectedStyle by remember { mutableStateOf(FlashStyle.BREATHING) }
+    var selectedRepeatCount by remember { mutableIntStateOf(1) }
     var selectedStrength by remember { mutableFloatStateOf(1f) }
 
     val safeMaxStrength = maxStrengthLevel.coerceAtLeast(1)
@@ -111,7 +112,7 @@ fun LivePreviewCard(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Test hardware pulse brightness instantly",
+                        text = "Test decoupled waveform styles and repetitions",
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextSecondary
                     )
@@ -144,9 +145,9 @@ fun LivePreviewCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Pattern Selection Chips (Scrollable row)
+            // 1. Flash Style Chips
             Text(
-                text = "WAVEFORM PATTERN",
+                text = "LIGHT WAVEFORM STYLE",
                 style = MaterialTheme.typography.labelSmall,
                 color = TextMuted,
                 fontWeight = FontWeight.Bold
@@ -159,25 +160,77 @@ fun LivePreviewCard(
                     .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                PatternType.entries.forEach { pattern ->
-                    val isSelected = pattern == selectedPatternType
-                    val chipBg = if (isSelected) AmberPrimary else DarkSurfaceVariant
-                    val chipTextColor = if (isSelected) DarkBackground else TextPrimary
-                    val chipBorder = if (isSelected) AmberPrimary else DarkBorder
+                FlashStyle.entries.forEach { style ->
+                    val isSelected = style == selectedStyle
+                    val bg = if (isSelected) AmberPrimary else DarkSurfaceVariant
+                    val textCol = if (isSelected) DarkBackground else TextPrimary
 
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(10.dp))
-                            .background(chipBg)
-                            .border(1.dp, chipBorder, RoundedCornerShape(10.dp))
-                            .clickable { selectedPatternType = pattern }
+                            .background(bg)
+                            .border(
+                                1.dp,
+                                if (isSelected) AmberPrimary else DarkBorder,
+                                RoundedCornerShape(10.dp)
+                            )
+                            .clickable { selectedStyle = style }
                             .padding(horizontal = 12.dp, vertical = 7.dp)
                     ) {
                         Text(
-                            text = pattern.title,
+                            text = style.title,
                             fontSize = 12.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = chipTextColor
+                            color = textCol
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // 2. Pulse Repetitions
+            Text(
+                text = "PULSE MULTIPLIER",
+                style = MaterialTheme.typography.labelSmall,
+                color = TextMuted,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf(
+                    1 to "Single (1x)",
+                    2 to "Double (2x)",
+                    3 to "Triple (3x)",
+                    4 to "Quad (4x)"
+                ).forEach { (count, label) ->
+                    val isSelected = selectedRepeatCount == count
+                    val bg = if (isSelected) AmberPrimary else DarkSurfaceVariant
+                    val textCol = if (isSelected) DarkBackground else TextPrimary
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(bg)
+                            .border(
+                                1.dp,
+                                if (isSelected) AmberPrimary else DarkBorder,
+                                RoundedCornerShape(10.dp)
+                            )
+                            .clickable { selectedRepeatCount = count }
+                            .padding(vertical = 7.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = label,
+                            fontSize = 11.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = textCol
                         )
                     }
                 }
@@ -185,7 +238,7 @@ fun LivePreviewCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Strength Level Slider
+            // 3. Brightness Slider
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -218,42 +271,39 @@ fun LivePreviewCard(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // Trigger Button
-            Button(
-                onClick = {
-                    if (isTesting) {
-                        onStopClick()
-                    } else {
-                        val pattern = FlashPattern.defaultFor(selectedPatternType)
-                        onTestClick(pattern, selectedStrength.roundToInt())
-                    }
-                },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isTesting) DarkSurfaceVariant else AmberPrimary,
-                    contentColor = if (isTesting) TextPrimary else DarkBackground
-                ),
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
+            // Test Button
+            if (isTesting) {
+                Button(
+                    onClick = onStopClick,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AmberPrimary.copy(alpha = 0.2f),
+                        contentColor = AmberPrimary
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(
-                        imageVector = if (isTesting) Icons.Default.Stop else Icons.Default.PlayArrow,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = if (isTesting) "Stop Preview" else "Test Flash on Device",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp
-                    )
+                    Icon(imageVector = Icons.Default.Stop, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Stop Live Test", fontWeight = FontWeight.Bold)
+                }
+            } else {
+                Button(
+                    onClick = {
+                        val pattern = FlashPattern.defaultFor(selectedStyle, selectedRepeatCount)
+                        onTestClick(pattern, selectedStrength.roundToInt())
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AmberPrimary,
+                        contentColor = DarkBackground
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Test Flash on Device", fontWeight = FontWeight.Bold)
                 }
             }
         }

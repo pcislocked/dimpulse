@@ -5,7 +5,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class GlobalFlashSettings(
     val masterEnabled: Boolean = true,
-    val defaultPattern: PatternType = PatternType.BREATHING,
+    val defaultFlashStyle: FlashStyle = FlashStyle.BREATHING,
+    val defaultRepeatCount: Int = 1,
     val defaultStrength: Int = 1,
     val onlyWhenScreenOff: Boolean = true,
     val triggerOrientation: TriggerOrientation = TriggerOrientation.EXCEPT_IN_POCKET,
@@ -16,5 +17,5 @@ data class GlobalFlashSettings(
     val quietHoursEndMinutes: Int = 7 * 60,    // 07:00
     val breathingDurationMs: Long = 400L,
     val repeatIntervalSeconds: Int = 0,
-    val cooldownSeconds: Int = 3 // Rate limit / debounce between consecutive flashes for same app
+    val cooldownSeconds: Int = 3
 )

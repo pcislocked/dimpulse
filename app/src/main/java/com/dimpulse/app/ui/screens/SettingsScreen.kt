@@ -50,7 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dimpulse.app.data.model.AlertImportanceFilter
-import com.dimpulse.app.data.model.PatternType
+import com.dimpulse.app.data.model.FlashStyle
 import com.dimpulse.app.data.model.TriggerOrientation
 import com.dimpulse.app.ui.theme.AmberPrimary
 import com.dimpulse.app.ui.theme.DarkBackground
@@ -219,7 +219,7 @@ fun SettingsScreen(
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "Default Waveform Pattern",
+                    text = "Default Light Waveform Style",
                     style = MaterialTheme.typography.titleMedium,
                     color = TextPrimary
                 )
@@ -231,8 +231,8 @@ fun SettingsScreen(
                         .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    PatternType.entries.forEach { pattern ->
-                        val isSelected = pattern == globalSettings.defaultPattern
+                    FlashStyle.entries.forEach { style ->
+                        val isSelected = style == globalSettings.defaultFlashStyle
                         val bg = if (isSelected) AmberPrimary else DarkSurfaceVariant
                         val textCol = if (isSelected) DarkBackground else TextPrimary
 
@@ -242,13 +242,58 @@ fun SettingsScreen(
                                 .background(bg)
                                 .border(1.dp, if (isSelected) AmberPrimary else DarkBorder, RoundedCornerShape(10.dp))
                                 .clickable {
-                                    mainViewModel.updateSettings { it.copy(defaultPattern = pattern) }
+                                    mainViewModel.updateSettings { it.copy(defaultFlashStyle = style) }
                                 }
                                 .padding(horizontal = 12.dp, vertical = 8.dp)
                         ) {
                             Text(
-                                text = pattern.title,
+                                text = style.title,
                                 fontSize = 12.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = textCol
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Text(
+                    text = "Default Pulse Multiplier",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = TextPrimary
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf(
+                        1 to "Single (1x)",
+                        2 to "Double (2x)",
+                        3 to "Triple (3x)",
+                        4 to "Quad (4x)"
+                    ).forEach { (count, label) ->
+                        val isSelected = count == globalSettings.defaultRepeatCount
+                        val bg = if (isSelected) AmberPrimary else DarkSurfaceVariant
+                        val textCol = if (isSelected) DarkBackground else TextPrimary
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(bg)
+                                .border(1.dp, if (isSelected) AmberPrimary else DarkBorder, RoundedCornerShape(10.dp))
+                                .clickable {
+                                    mainViewModel.updateSettings { it.copy(defaultRepeatCount = count) }
+                                }
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = label,
+                                fontSize = 11.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                 color = textCol
                             )

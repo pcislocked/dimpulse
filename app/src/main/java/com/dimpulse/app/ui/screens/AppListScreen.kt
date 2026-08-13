@@ -191,7 +191,8 @@ fun AppListScreen(
                 ) { appItem ->
                     AppConfigItem(
                         appItem = appItem,
-                        defaultPattern = globalSettings.defaultPattern,
+                        defaultFlashStyle = globalSettings.defaultFlashStyle,
+                        defaultRepeatCount = globalSettings.defaultRepeatCount,
                         defaultStrength = globalSettings.defaultStrength,
                         onClick = { appListViewModel.selectAppForEdit(appItem) },
                         onToggle = { enabled -> appListViewModel.toggleAppEnabled(appItem, enabled) }
@@ -210,7 +211,8 @@ fun AppListScreen(
         PatternEditorSheet(
             appItem = app,
             maxStrengthLevel = hardwareInfo.maxStrengthLevel,
-            defaultPattern = globalSettings.defaultPattern,
+            defaultFlashStyle = globalSettings.defaultFlashStyle,
+            defaultRepeatCount = globalSettings.defaultRepeatCount,
             defaultStrength = globalSettings.defaultStrength,
             onDismiss = { appListViewModel.selectAppForEdit(null) },
             onSave = { config -> appListViewModel.saveConfig(config) },

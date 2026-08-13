@@ -32,7 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
-import com.dimpulse.app.data.model.PatternType
+import com.dimpulse.app.data.model.FlashStyle
 import com.dimpulse.app.ui.theme.AmberPrimary
 import com.dimpulse.app.ui.theme.DarkBorder
 import com.dimpulse.app.ui.theme.DarkSurface
@@ -45,7 +45,8 @@ import com.dimpulse.app.ui.viewmodel.InstalledAppItem
 @Composable
 fun AppConfigItem(
     appItem: InstalledAppItem,
-    defaultPattern: PatternType,
+    defaultFlashStyle: FlashStyle,
+    defaultRepeatCount: Int,
     defaultStrength: Int,
     onClick: () -> Unit,
     onToggle: (Boolean) -> Unit,
@@ -53,7 +54,8 @@ fun AppConfigItem(
 ) {
     val config = appItem.config
     val isEnabled = config?.isEnabled ?: false
-    val pattern = config?.patternType ?: defaultPattern
+    val style = config?.flashStyle ?: defaultFlashStyle
+    val repeats = config?.repeatCount ?: defaultRepeatCount
     val strength = config?.strengthLevel ?: defaultStrength
     val hasCustomConfig = config != null
 
@@ -115,7 +117,7 @@ fun AppConfigItem(
                         modifier = Modifier.padding(top = 2.dp)
                     ) {
                         Text(
-                            text = "${pattern.title} • Level $strength",
+                            text = "${style.title} • ${repeats}x • Level $strength",
                             style = MaterialTheme.typography.bodyMedium,
                             color = if (hasCustomConfig) AmberPrimary else TextSecondary,
                             fontSize = 12.sp
@@ -163,8 +165,8 @@ private fun DefaultAppIcon() {
         Icon(
             imageVector = Icons.Default.Android,
             contentDescription = null,
-            tint = TextSecondary,
-            modifier = Modifier.size(24.dp)
+            tint = AmberPrimary,
+            modifier = Modifier.size(22.dp)
         )
     }
 }

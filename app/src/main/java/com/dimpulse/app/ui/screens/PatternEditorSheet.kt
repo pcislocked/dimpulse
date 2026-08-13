@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -52,7 +53,7 @@ import androidx.compose.ui.unit.sp
 import com.dimpulse.app.data.model.AlertImportanceFilter
 import com.dimpulse.app.data.model.AppFlashConfig
 import com.dimpulse.app.data.model.FlashPattern
-import com.dimpulse.app.data.model.PatternType
+import com.dimpulse.app.data.model.FlashStyle
 import com.dimpulse.app.data.model.TriggerOrientation
 import com.dimpulse.app.ui.theme.AccentError
 import com.dimpulse.app.ui.theme.AmberPrimary
@@ -71,7 +72,8 @@ import kotlin.math.roundToInt
 fun PatternEditorSheet(
     appItem: InstalledAppItem,
     maxStrengthLevel: Int,
-    defaultPattern: PatternType,
+    defaultFlashStyle: FlashStyle,
+    defaultRepeatCount: Int,
     defaultStrength: Int,
     onDismiss: () -> Unit,
     onSave: (AppFlashConfig) -> Unit,
@@ -80,11 +82,11 @@ fun PatternEditorSheet(
 ) {
     val existing = appItem.config
     var isEnabled by remember { mutableStateOf(existing?.isEnabled ?: true) }
-    var selectedPattern by remember { mutableStateOf(existing?.patternType ?: defaultPattern) }
+    var selectedFlashStyle by remember { mutableStateOf(existing?.flashStyle ?: defaultFlashStyle) }
+    var repeatCount by remember { mutableIntStateOf(existing?.repeatCount ?: defaultRepeatCount) }
     var strengthLevel by remember {
         mutableFloatStateOf((existing?.strengthLevel ?: defaultStrength).toFloat())
     }
-    var repeatCount by remember { mutableIntStateOf(existing?.repeatCount ?: 1) }
     var repeatIntervalSec by remember { mutableIntStateOf(existing?.repeatIntervalSeconds ?: 0) }
     var bypassDnd by remember { mutableStateOf(existing?.bypassDnd ?: false) }
     var triggerOrientation by remember { mutableStateOf(existing?.triggerOrientation) }
@@ -115,7 +117,7 @@ fun PatternEditorSheet(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = appItem.appName,
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.headlineSmall,
                         color = TextPrimary,
                         fontWeight = FontWeight.Bold
                     )
@@ -123,22 +125,29 @@ fun PatternEditorSheet(
                         text = appItem.packageName,
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextSecondary,
-                        fontSize = 12.sp
+                        fontSize = 11.sp
                     )
                 }
 
-                IconButton(onClick = onDismiss) {
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(DarkSurfaceVariant)
+                ) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Close",
-                        tint = TextSecondary
+                        tint = TextSecondary,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Enable Alert for this app
+            // Enable App Toggle
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -176,9 +185,9 @@ fun PatternEditorSheet(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Waveform Pattern Selector
+            // 1. Light Waveform Style Selector
             Text(
-                text = "PULSE WAVEFORM",
+                text = "LIGHT WAVEFORM STYLE",
                 style = MaterialTheme.typography.labelSmall,
                 color = TextMuted,
                 fontWeight = FontWeight.Bold
@@ -191,8 +200,8 @@ fun PatternEditorSheet(
                     .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                PatternType.entries.forEach { pattern ->
-                    val isSelected = pattern == selectedPattern
+                FlashStyle.entries.forEach { style ->
+                    val isSelected = style == selectedFlashStyle
                     val bg = if (isSelected) AmberPrimary else DarkSurfaceVariant
                     val textCol = if (isSelected) DarkBackground else TextPrimary
 
@@ -201,11 +210,56 @@ fun PatternEditorSheet(
                             .clip(RoundedCornerShape(10.dp))
                             .background(bg)
                             .border(1.dp, if (isSelected) AmberPrimary else DarkBorder, RoundedCornerShape(10.dp))
-                            .clickable { selectedPattern = pattern }
+                            .clickable { selectedFlashStyle = style }
                             .padding(horizontal = 12.dp, vertical = 8.dp)
                     ) {
                         Text(
-                            text = pattern.title,
+                            text = style.title,
+                            fontSize = 12.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = textCol
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 2. Pulse Multiplier Selector
+            Text(
+                text = "PULSE MULTIPLIER",
+                style = MaterialTheme.typography.labelSmall,
+                color = TextMuted,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf(
+                    1 to "1x",
+                    2 to "2x",
+                    3 to "3x",
+                    4 to "4x"
+                ).forEach { (count, label) ->
+                    val isSelected = count == repeatCount
+                    val bg = if (isSelected) AmberPrimary else DarkSurfaceVariant
+                    val textCol = if (isSelected) DarkBackground else TextPrimary
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(bg)
+                            .border(1.dp, if (isSelected) AmberPrimary else DarkBorder, RoundedCornerShape(10.dp))
+                            .clickable { repeatCount = count }
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = label,
                             fontSize = 12.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                             color = textCol
@@ -216,7 +270,7 @@ fun PatternEditorSheet(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Brightness Intensity Slider
+            // 3. Brightness Intensity Slider
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -251,42 +305,7 @@ fun PatternEditorSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Pulse Repeat Repetitions
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "REPETITIONS PER ALERT",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = TextMuted,
-                    fontWeight = FontWeight.Bold
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf(1, 2, 3, 4).forEach { count ->
-                        val isSel = repeatCount == count
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (isSel) AmberPrimary else DarkSurfaceVariant)
-                                .clickable { repeatCount = count }
-                                .padding(horizontal = 10.dp, vertical = 5.dp)
-                        ) {
-                            Text(
-                                text = "$count×",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isSel) DarkBackground else TextSecondary
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Notification Importance / Sound Filter
+            // 4. Notification Importance / Sound Filter
             Text(
                 text = "ALERT IMPORTANCE FILTER",
                 style = MaterialTheme.typography.labelSmall,
@@ -302,7 +321,7 @@ fun PatternEditorSheet(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 listOf(
-                    null to "Default (Loud Only)",
+                    null to "Default (Global)",
                     AlertImportanceFilter.ONLY_ALERTING to "Only Loud",
                     AlertImportanceFilter.ALL_INCLUDING_SILENT to "All (Inc. Silent)",
                     AlertImportanceFilter.NONE to "None (Mute)"
@@ -331,7 +350,7 @@ fun PatternEditorSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Burst Rate Limit / Cooldown Debounce
+            // 5. Burst Rate Limit / Cooldown Debounce
             Text(
                 text = "BURST RATE LIMIT (COOLDOWN)",
                 style = MaterialTheme.typography.labelSmall,
@@ -379,7 +398,7 @@ fun PatternEditorSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Bypass DND Switch
+            // 6. Bypass DND Switch
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -420,7 +439,7 @@ fun PatternEditorSheet(
             // Test Pattern Action
             OutlinedButton(
                 onClick = {
-                    val pattern = FlashPattern.defaultFor(selectedPattern).copy(repeatCount = repeatCount)
+                    val pattern = FlashPattern.defaultFor(selectedFlashStyle, repeatCount)
                     onTestPattern(pattern, strengthLevel.roundToInt())
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -457,9 +476,9 @@ fun PatternEditorSheet(
                             packageName = appItem.packageName,
                             appName = appItem.appName,
                             isEnabled = isEnabled,
-                            patternType = selectedPattern,
-                            strengthLevel = strengthLevel.roundToInt(),
+                            flashStyle = selectedFlashStyle,
                             repeatCount = repeatCount,
+                            strengthLevel = strengthLevel.roundToInt(),
                             repeatIntervalSeconds = repeatIntervalSec,
                             cooldownSeconds = cooldownSeconds,
                             bypassDnd = bypassDnd,

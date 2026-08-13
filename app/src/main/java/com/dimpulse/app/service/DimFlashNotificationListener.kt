@@ -10,6 +10,7 @@ import android.util.Log
 import com.dimpulse.app.DimPulseApp
 import com.dimpulse.app.data.model.AlertImportanceFilter
 import com.dimpulse.app.data.model.FlashPattern
+import com.dimpulse.app.data.model.FlashStyle
 import com.dimpulse.app.data.model.GlobalFlashSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -124,14 +125,14 @@ class DimFlashNotificationListener : NotificationListenerService() {
                 return@launch
             }
 
-            // Determine pattern and intensity
-            val patternType = appConfig?.patternType ?: globalSettings.defaultPattern
+            // Determine decoupled style, repetitions, and intensity
+            val flashStyle = appConfig?.flashStyle ?: globalSettings.defaultFlashStyle
+            val repeatCount = appConfig?.repeatCount ?: globalSettings.defaultRepeatCount
             val strengthLevel = appConfig?.strengthLevel ?: globalSettings.defaultStrength
-            val repeatCount = appConfig?.repeatCount ?: 1
             val repeatIntervalSec = appConfig?.repeatIntervalSeconds ?: globalSettings.repeatIntervalSeconds
-            val flashPattern = FlashPattern.defaultFor(patternType).copy(repeatCount = repeatCount)
+            val flashPattern = FlashPattern(style = flashStyle, repeatCount = repeatCount)
 
-            Log.i(tag, "Dispatching ambient LED pulse for $packageName: $patternType at level $strengthLevel")
+            Log.i(tag, "Dispatching ambient LED pulse for $packageName: $flashStyle x$repeatCount at level $strengthLevel")
             app.pulseEngine.triggerPattern(flashPattern, strengthLevel)
 
             // Optional repeat nag for missed alerts if configured
