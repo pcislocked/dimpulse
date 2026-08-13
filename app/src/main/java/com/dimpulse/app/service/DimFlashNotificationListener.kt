@@ -52,8 +52,8 @@ class DimFlashNotificationListener : NotificationListenerService() {
         val app = application as? DimPulseApp ?: return
         val globalSettings = app.repository.globalSettings.value
 
-        // 1. Master enable switch
-        if (!globalSettings.masterEnabled) {
+        // 1. Master enable switch & external torch safety check
+        if (!globalSettings.masterEnabled || app.flashController.isExternalTorchActive()) {
             return
         }
 
