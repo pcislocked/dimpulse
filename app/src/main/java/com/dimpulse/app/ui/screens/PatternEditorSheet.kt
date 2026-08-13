@@ -75,6 +75,7 @@ fun PatternEditorSheet(
     defaultFlashStyle: FlashStyle,
     defaultRepeatCount: Int,
     defaultStrength: Int,
+    defaultBreathingDurationMs: Long = 350L,
     onDismiss: () -> Unit,
     onSave: (AppFlashConfig) -> Unit,
     onReset: (String) -> Unit,
@@ -87,6 +88,7 @@ fun PatternEditorSheet(
     var strengthLevel by remember {
         mutableFloatStateOf((existing?.strengthLevel ?: defaultStrength).toFloat())
     }
+    var breathingDurationMs by remember { mutableStateOf(existing?.breathingDurationMs) }
     var repeatIntervalSec by remember { mutableIntStateOf(existing?.repeatIntervalSeconds ?: 0) }
     var bypassDnd by remember { mutableStateOf(existing?.bypassDnd ?: false) }
     var triggerOrientation by remember { mutableStateOf(existing?.triggerOrientation) }
@@ -268,9 +270,66 @@ fun PatternEditorSheet(
                 }
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 3. Waveform Speed & Duration
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "WAVEFORM SPEED (DURATION)",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextMuted,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = if (breathingDurationMs == null) "Default (${defaultBreathingDurationMs}ms)" else "${breathingDurationMs}ms",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = AmberPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf(
+                    null to "Default",
+                    200L to "Snappy (200ms)",
+                    350L to "Balanced (350ms)",
+                    600L to "Ambient (600ms)"
+                ).forEach { (dur, label) ->
+                    val isSelected = breathingDurationMs == dur
+                    val bg = if (isSelected) AmberPrimary else DarkSurfaceVariant
+                    val textCol = if (isSelected) DarkBackground else TextPrimary
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(bg)
+                            .border(1.dp, if (isSelected) AmberPrimary else DarkBorder, RoundedCornerShape(10.dp))
+                            .clickable { breathingDurationMs = dur }
+                            .padding(horizontal = 12.dp, vertical = 7.dp)
+                    ) {
+                        Text(
+                            text = label,
+                            fontSize = 12.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = textCol
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 3. Brightness Intensity Slider
+            // 4. Brightness Intensity Slider
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -305,7 +364,7 @@ fun PatternEditorSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 4. Notification Importance / Sound Filter
+            // 5. Notification Importance / Sound Filter
             Text(
                 text = "ALERT IMPORTANCE FILTER",
                 style = MaterialTheme.typography.labelSmall,
@@ -350,7 +409,7 @@ fun PatternEditorSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 5. Burst Rate Limit / Cooldown Debounce
+            // 6. Burst Rate Limit / Cooldown Debounce
             Text(
                 text = "BURST RATE LIMIT (COOLDOWN)",
                 style = MaterialTheme.typography.labelSmall,
@@ -398,7 +457,7 @@ fun PatternEditorSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 6. Bypass DND Switch
+            // 7. Bypass DND Switch
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -439,7 +498,11 @@ fun PatternEditorSheet(
             // Test Pattern Action
             OutlinedButton(
                 onClick = {
-                    val pattern = FlashPattern.defaultFor(selectedFlashStyle, repeatCount)
+                    val pattern = FlashPattern.defaultFor(
+                        style = selectedFlashStyle,
+                        repeatCount = repeatCount,
+                        breathingDurationMs = breathingDurationMs ?: defaultBreathingDurationMs
+                    )
                     onTestPattern(pattern, strengthLevel.roundToInt())
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -479,6 +542,7 @@ fun PatternEditorSheet(
                             flashStyle = selectedFlashStyle,
                             repeatCount = repeatCount,
                             strengthLevel = strengthLevel.roundToInt(),
+                            breathingDurationMs = breathingDurationMs,
                             repeatIntervalSeconds = repeatIntervalSec,
                             cooldownSeconds = cooldownSeconds,
                             bypassDnd = bypassDnd,

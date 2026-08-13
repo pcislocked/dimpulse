@@ -23,6 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.DoNotDisturb
+import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Repeat
@@ -30,10 +31,13 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.ScreenLockPortrait
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.StayCurrentPortrait
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
@@ -50,6 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dimpulse.app.data.model.AlertImportanceFilter
+import com.dimpulse.app.data.model.FlashPattern
 import com.dimpulse.app.data.model.FlashStyle
 import com.dimpulse.app.data.model.TriggerOrientation
 import com.dimpulse.app.ui.theme.AmberPrimary
@@ -497,6 +502,43 @@ fun SettingsScreen(
                             }
                         }
                     }
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // Test This Default Configuration
+                val isTesting by mainViewModel.isTestingPulse.collectAsState()
+                OutlinedButton(
+                    onClick = {
+                        if (isTesting) {
+                            mainViewModel.stopTestPulse()
+                        } else {
+                            val pattern = FlashPattern.defaultFor(
+                                style = globalSettings.defaultFlashStyle,
+                                repeatCount = globalSettings.defaultRepeatCount,
+                                breathingDurationMs = globalSettings.breathingDurationMs
+                            )
+                            mainViewModel.triggerTestPulse(pattern, globalSettings.defaultStrength)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = AmberPrimary
+                    )
+                ) {
+                    Icon(
+                        imageVector = if (isTesting) Icons.Default.Stop else Icons.Default.FlashOn,
+                        contentDescription = null,
+                        tint = AmberPrimary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (isTesting) "Stop Test" else "Test Default Waveform on Device",
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
                 }
             }
         }

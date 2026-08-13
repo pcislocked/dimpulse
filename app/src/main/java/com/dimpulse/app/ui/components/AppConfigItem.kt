@@ -116,8 +116,9 @@ fun AppConfigItem(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(top = 2.dp)
                     ) {
+                        val durText = if (config?.breathingDurationMs != null) " • ${config.breathingDurationMs}ms" else ""
                         Text(
-                            text = "${style.title} • ${repeats}x • Level $strength",
+                            text = "${style.title} • ${repeats}x • Lvl $strength$durText",
                             style = MaterialTheme.typography.bodyMedium,
                             color = if (hasCustomConfig) AmberPrimary else TextSecondary,
                             fontSize = 12.sp

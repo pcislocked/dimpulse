@@ -24,8 +24,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -33,6 +35,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
@@ -40,6 +43,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -52,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dimpulse.app.data.model.FlashPattern
 import com.dimpulse.app.data.model.FlashStyle
+import com.dimpulse.app.ui.theme.AccentSuccess
 import com.dimpulse.app.ui.theme.AmberPrimary
 import com.dimpulse.app.ui.theme.AmberSecondary
 import com.dimpulse.app.ui.theme.DarkBackground
@@ -69,11 +74,14 @@ fun LivePreviewCard(
     isTesting: Boolean,
     onTestClick: (FlashPattern, Int) -> Unit,
     onStopClick: () -> Unit,
+    onApplyAsDefault: ((FlashStyle, Int, Int, Long) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var selectedStyle by remember { mutableStateOf(FlashStyle.BREATHING) }
     var selectedRepeatCount by remember { mutableIntStateOf(1) }
     var selectedStrength by remember { mutableFloatStateOf(1f) }
+    var selectedDurationMs by remember { mutableLongStateOf(350L) }
+    var showSavedConfirm by remember { mutableStateOf(false) }
 
     val safeMaxStrength = maxStrengthLevel.coerceAtLeast(1)
 
@@ -112,7 +120,7 @@ fun LivePreviewCard(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Test decoupled waveform styles and repetitions",
+                        text = "Experiment with waveforms & save to profile",
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextSecondary
                     )
@@ -174,7 +182,10 @@ fun LivePreviewCard(
                                 if (isSelected) AmberPrimary else DarkBorder,
                                 RoundedCornerShape(10.dp)
                             )
-                            .clickable { selectedStyle = style }
+                            .clickable {
+                                selectedStyle = style
+                                showSavedConfirm = false
+                            }
                             .padding(horizontal = 12.dp, vertical = 7.dp)
                     ) {
                         Text(
@@ -222,7 +233,10 @@ fun LivePreviewCard(
                                 if (isSelected) AmberPrimary else DarkBorder,
                                 RoundedCornerShape(10.dp)
                             )
-                            .clickable { selectedRepeatCount = count }
+                            .clickable {
+                                selectedRepeatCount = count
+                                showSavedConfirm = false
+                            }
                             .padding(vertical = 7.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -236,9 +250,85 @@ fun LivePreviewCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // 3. Brightness Slider
+            // 3. Waveform Speed & Duration
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "WAVEFORM SPEED (DURATION)",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextMuted,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "${selectedDurationMs}ms",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = AmberPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf(
+                    200L to "Snappy (200ms)",
+                    350L to "Balanced (350ms)",
+                    600L to "Ambient (600ms)"
+                ).forEach { (ms, label) ->
+                    val isSelected = selectedDurationMs == ms
+                    val bg = if (isSelected) AmberPrimary else DarkSurfaceVariant
+                    val textCol = if (isSelected) DarkBackground else TextPrimary
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(bg)
+                            .border(1.dp, if (isSelected) AmberPrimary else DarkBorder, RoundedCornerShape(8.dp))
+                            .clickable {
+                                selectedDurationMs = ms
+                                showSavedConfirm = false
+                            }
+                            .padding(vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = label,
+                            fontSize = 11.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = textCol
+                        )
+                    }
+                }
+            }
+
+            Slider(
+                value = selectedDurationMs.toFloat(),
+                onValueChange = {
+                    selectedDurationMs = it.toLong()
+                    showSavedConfirm = false
+                },
+                valueRange = 150f..800f,
+                steps = 12,
+                colors = SliderDefaults.colors(
+                    thumbColor = AmberPrimary,
+                    activeTrackColor = AmberPrimary,
+                    inactiveTrackColor = DarkSurfaceVariant
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // 4. Brightness Slider
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -260,7 +350,10 @@ fun LivePreviewCard(
 
             Slider(
                 value = selectedStrength,
-                onValueChange = { selectedStrength = it },
+                onValueChange = {
+                    selectedStrength = it
+                    showSavedConfirm = false
+                },
                 valueRange = 1f..safeMaxStrength.toFloat(),
                 steps = if (safeMaxStrength > 1) safeMaxStrength - 2 else 0,
                 colors = SliderDefaults.colors(
@@ -273,37 +366,78 @@ fun LivePreviewCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Test Button
-            if (isTesting) {
-                Button(
-                    onClick = onStopClick,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AmberPrimary.copy(alpha = 0.2f),
-                        contentColor = AmberPrimary
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(imageVector = Icons.Default.Stop, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Stop Live Test", fontWeight = FontWeight.Bold)
+            // 5. Test Button & Apply as Global Default
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                if (isTesting) {
+                    Button(
+                        onClick = onStopClick,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AmberPrimary.copy(alpha = 0.2f),
+                            contentColor = AmberPrimary
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(imageVector = Icons.Default.Stop, contentDescription = null)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Stop", fontWeight = FontWeight.Bold)
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            val pattern = FlashPattern.defaultFor(
+                                style = selectedStyle,
+                                repeatCount = selectedRepeatCount,
+                                breathingDurationMs = selectedDurationMs
+                            )
+                            onTestClick(pattern, selectedStrength.roundToInt())
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = AmberPrimary,
+                            contentColor = DarkBackground
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Test Flash", fontWeight = FontWeight.Bold)
+                    }
                 }
-            } else {
-                Button(
-                    onClick = {
-                        val pattern = FlashPattern.defaultFor(selectedStyle, selectedRepeatCount)
-                        onTestClick(pattern, selectedStrength.roundToInt())
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AmberPrimary,
-                        contentColor = DarkBackground
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Test Flash on Device", fontWeight = FontWeight.Bold)
+
+                if (onApplyAsDefault != null) {
+                    OutlinedButton(
+                        onClick = {
+                            onApplyAsDefault(
+                                selectedStyle,
+                                selectedRepeatCount,
+                                selectedStrength.roundToInt(),
+                                selectedDurationMs
+                            )
+                            showSavedConfirm = true
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = if (showSavedConfirm) AccentSuccess else TextPrimary
+                        )
+                    ) {
+                        Icon(
+                            imageVector = if (showSavedConfirm) Icons.Default.CheckCircle else Icons.Default.Save,
+                            contentDescription = null,
+                            tint = if (showSavedConfirm) AccentSuccess else AmberPrimary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (showSavedConfirm) "Applied!" else "Save as Default",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 12.sp
+                        )
+                    }
                 }
             }
         }

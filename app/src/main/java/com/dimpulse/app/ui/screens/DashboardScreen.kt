@@ -96,7 +96,7 @@ fun DashboardScreen(
             }
         )
 
-        // Live Test Drive Studio
+        // Live Test Drive Studio (Playground)
         LivePreviewCard(
             maxStrengthLevel = hardwareInfo.maxStrengthLevel,
             isTesting = isTesting,
@@ -105,6 +105,16 @@ fun DashboardScreen(
             },
             onStopClick = {
                 mainViewModel.stopTestPulse()
+            },
+            onApplyAsDefault = { style, count, strength, durationMs ->
+                mainViewModel.updateSettings {
+                    it.copy(
+                        defaultFlashStyle = style,
+                        defaultRepeatCount = count,
+                        defaultStrength = strength,
+                        breathingDurationMs = durationMs
+                    )
+                }
             }
         )
 

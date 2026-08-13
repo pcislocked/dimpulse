@@ -10,6 +10,7 @@ data class AppFlashConfig(
     val flashStyle: FlashStyle = FlashStyle.BREATHING,
     val repeatCount: Int = 1,
     val strengthLevel: Int = 1,
+    val breathingDurationMs: Long? = null,
     val repeatIntervalSeconds: Int = 0,
     val cooldownSeconds: Int? = null,
     val bypassDnd: Boolean = false,

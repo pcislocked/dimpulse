@@ -23,8 +23,15 @@ data class InstalledAppItem(
     val appName: String,
     val icon: Drawable?,
     val isSystemApp: Boolean,
+    val hasLauncherIntent: Boolean = false,
     val config: AppFlashConfig?
 )
+
+enum class AppFilterType(val title: String) {
+    USER_APPS("User Apps"),
+    CONFIGURED("Custom Rules"),
+    ALL_APPS("All Apps (System)")
+}
 
 class AppListViewModel : ViewModel() {
 
@@ -33,6 +40,9 @@ class AppListViewModel : ViewModel() {
     private val _rawInstalledApps = MutableStateFlow<List<InstalledAppItem>>(emptyList())
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    private val _filterType = MutableStateFlow(AppFilterType.USER_APPS)
+    val filterType: StateFlow<AppFilterType> = _filterType.asStateFlow()
 
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -43,23 +53,30 @@ class AppListViewModel : ViewModel() {
     val filteredApps: StateFlow<List<InstalledAppItem>> = combine(
         _rawInstalledApps,
         repository.appConfigs,
-        _searchQuery
-    ) { apps, configsMap, query ->
+        _searchQuery,
+        _filterType
+    ) { apps, configsMap, query, filter ->
         val updatedList = apps.map { app ->
             app.copy(config = configsMap[app.packageName])
         }
 
-        val filtered = if (query.isBlank()) {
-            updatedList
+        val typeFiltered = when (filter) {
+            AppFilterType.USER_APPS -> updatedList.filter { !it.isSystemApp || it.hasLauncherIntent || it.config != null }
+            AppFilterType.CONFIGURED -> updatedList.filter { it.config != null }
+            AppFilterType.ALL_APPS -> updatedList
+        }
+
+        val searched = if (query.isBlank()) {
+            typeFiltered
         } else {
-            updatedList.filter {
+            typeFiltered.filter {
                 it.appName.contains(query, ignoreCase = true) ||
                         it.packageName.contains(query, ignoreCase = true)
             }
         }
 
         // Sort: Configured apps first, then alphabetically
-        filtered.sortedWith(
+        searched.sortedWith(
             compareByDescending<InstalledAppItem> { it.config != null }
                 .thenBy { it.appName.lowercase() }
         )
@@ -81,6 +98,7 @@ class AppListViewModel : ViewModel() {
                     if (appInfo.packageName == context.packageName) return@mapNotNull null
 
                     val isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+                    val hasLauncher = pm.getLaunchIntentForPackage(appInfo.packageName) != null
                     val appName = pm.getApplicationLabel(appInfo).toString()
                     val icon = try {
                         pm.getApplicationIcon(appInfo)
@@ -93,6 +111,7 @@ class AppListViewModel : ViewModel() {
                         appName = appName,
                         icon = icon,
                         isSystemApp = isSystem,
+                        hasLauncherIntent = hasLauncher,
                         config = null
                     )
                 }
@@ -104,6 +123,10 @@ class AppListViewModel : ViewModel() {
 
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
+    }
+
+    fun setFilterType(filter: AppFilterType) {
+        _filterType.value = filter
     }
 
     fun selectAppForEdit(app: InstalledAppItem?) {
@@ -123,7 +146,8 @@ class AppListViewModel : ViewModel() {
                     isEnabled = isEnabled,
                     flashStyle = global.defaultFlashStyle,
                     repeatCount = global.defaultRepeatCount,
-                    strengthLevel = global.defaultStrength
+                    strengthLevel = global.defaultStrength,
+                    breathingDurationMs = global.breathingDurationMs
                 )
                 repository.saveAppConfig(newConfig)
             }

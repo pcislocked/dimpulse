@@ -51,6 +51,7 @@ import com.dimpulse.app.ui.theme.DarkSurfaceVariant
 import com.dimpulse.app.ui.theme.TextMuted
 import com.dimpulse.app.ui.theme.TextPrimary
 import com.dimpulse.app.ui.theme.TextSecondary
+import com.dimpulse.app.ui.viewmodel.AppFilterType
 import com.dimpulse.app.ui.viewmodel.AppListViewModel
 import com.dimpulse.app.ui.viewmodel.MainViewModel
 
@@ -68,19 +69,11 @@ fun AppListScreen(
     val globalSettings by mainViewModel.globalSettings.collectAsState()
     val hardwareInfo = mainViewModel.hardwareInfo
 
-    var showConfiguredOnly by remember { mutableStateOf(false) }
+    val currentFilter by appListViewModel.filterType.collectAsState()
 
     LaunchedEffect(Unit) {
         if (filteredApps.isEmpty()) {
             appListViewModel.loadInstalledApps(context)
-        }
-    }
-
-    val displayApps = remember(filteredApps, showConfiguredOnly) {
-        if (showConfiguredOnly) {
-            filteredApps.filter { it.config != null }
-        } else {
-            filteredApps
         }
     }
 
@@ -129,21 +122,19 @@ fun AppListScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Filter chips
+        // Filter chips (User Apps by default)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            FilterTabChip(
-                title = "All Apps (${filteredApps.size})",
-                isSelected = !showConfiguredOnly,
-                onClick = { showConfiguredOnly = false }
-            )
-            FilterTabChip(
-                title = "Custom Rules (${filteredApps.count { it.config != null }})",
-                isSelected = showConfiguredOnly,
-                onClick = { showConfiguredOnly = true }
-            )
+            AppFilterType.entries.forEach { filter ->
+                FilterTabChip(
+                    title = filter.title,
+                    isSelected = currentFilter == filter,
+                    onClick = { appListViewModel.setFilterType(filter) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -158,7 +149,7 @@ fun AppListScreen(
             ) {
                 CircularProgressIndicator(color = AmberPrimary)
             }
-        } else if (displayApps.isEmpty()) {
+        } else if (filteredApps.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -167,12 +158,12 @@ fun AppListScreen(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = if (showConfiguredOnly) "No custom app rules yet" else "No applications found",
+                        text = if (currentFilter == AppFilterType.CONFIGURED) "No custom app rules yet" else "No applications found",
                         style = MaterialTheme.typography.titleMedium,
                         color = TextSecondary
                     )
                     Text(
-                        text = if (showConfiguredOnly) "Tap any app to assign a custom pattern" else "Try adjusting your search query",
+                        text = if (currentFilter == AppFilterType.CONFIGURED) "Tap any app to assign a custom pattern" else "Try adjusting your search query",
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextMuted
                     )
@@ -186,7 +177,7 @@ fun AppListScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(
-                    items = displayApps,
+                    items = filteredApps,
                     key = { it.packageName }
                 ) { appItem ->
                     AppConfigItem(
@@ -214,6 +205,7 @@ fun AppListScreen(
             defaultFlashStyle = globalSettings.defaultFlashStyle,
             defaultRepeatCount = globalSettings.defaultRepeatCount,
             defaultStrength = globalSettings.defaultStrength,
+            defaultBreathingDurationMs = globalSettings.breathingDurationMs,
             onDismiss = { appListViewModel.selectAppForEdit(null) },
             onSave = { config -> appListViewModel.saveConfig(config) },
             onReset = { pkg -> appListViewModel.resetAppConfig(pkg) },
@@ -228,25 +220,28 @@ fun AppListScreen(
 private fun FilterTabChip(
     title: String,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val bg = if (isSelected) AmberPrimary else DarkSurfaceVariant
     val textCol = if (isSelected) DarkBackground else TextSecondary
     val border = if (isSelected) AmberPrimary else DarkBorder
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .clip(RoundedCornerShape(10.dp))
             .background(bg)
             .border(1.dp, border, RoundedCornerShape(10.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 8.dp)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
     ) {
         Text(
             text = title,
-            fontSize = 12.sp,
+            fontSize = 11.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            color = textCol
+            color = textCol,
+            maxLines = 1
         )
     }
 }

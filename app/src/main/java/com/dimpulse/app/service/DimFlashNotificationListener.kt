@@ -129,7 +129,7 @@ class DimFlashNotificationListener : NotificationListenerService() {
             val repeatCount = appConfig?.repeatCount ?: globalSettings.defaultRepeatCount
             val strengthLevel = appConfig?.strengthLevel ?: globalSettings.defaultStrength
             val repeatIntervalSec = appConfig?.repeatIntervalSeconds ?: globalSettings.repeatIntervalSeconds
-            val breathingDuration = globalSettings.breathingDurationMs
+            val breathingDuration = appConfig?.breathingDurationMs ?: globalSettings.breathingDurationMs
             val onDuration = appConfig?.customOnDurationMs ?: 100L
             val offDuration = appConfig?.customOffDurationMs ?: 120L
             val flashPattern = FlashPattern(
