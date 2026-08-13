@@ -31,7 +31,9 @@ class ProximitySensorHelper(private val context: Context) {
     private val accelerometer = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
     private val mainHandler = Handler(Looper.getMainLooper())
 
-    suspend fun getSensorSnapshot(timeoutMs: Long = 180L): SensorSnapshot {
+    private var activeLiftListener: SensorEventListener? = null
+
+    suspend fun getSensorSnapshot(timeoutMs: Long = 280L): SensorSnapshot {
         if (sensorManager == null) {
             return SensorSnapshot()
         }
@@ -132,6 +134,48 @@ class ProximitySensorHelper(private val context: Context) {
         } catch (e: Exception) {
             Log.e(tag, "shouldAllowFlash fallback to true: ${e.message}")
             true
+        }
+    }
+
+    fun startLiftWatcher(onLiftDetected: () -> Unit) {
+        stopLiftWatcher()
+        if (sensorManager == null || accelerometer == null) return
+
+        val listener = object : SensorEventListener {
+            override fun onSensorChanged(event: SensorEvent?) {
+                if (event == null || event.sensor.type != Sensor.TYPE_ACCELEROMETER) return
+                val x = event.values.getOrNull(0) ?: 0f
+                val y = event.values.getOrNull(1) ?: 0f
+                val z = event.values.getOrNull(2) ?: 0f
+
+                // If phone was face-down (z < -6.5) and is now tilted or lifted (z > -4.5 or |y| > 5.0 or |x| > 5.0)
+                val isLiftedOrTilted = z > -4.5f || abs(y) > 5.0f || abs(x) > 5.0f
+                if (isLiftedOrTilted) {
+                    Log.i(tag, "Lift gesture detected during active call! Silencing flash.")
+                    stopLiftWatcher()
+                    onLiftDetected()
+                }
+            }
+
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+        }
+
+        activeLiftListener = listener
+        try {
+            sensorManager.registerListener(listener, accelerometer, SensorManager.SENSOR_DELAY_NORMAL, mainHandler)
+        } catch (e: Exception) {
+            Log.e(tag, "Error registering lift watcher: ${e.message}")
+        }
+    }
+
+    fun stopLiftWatcher() {
+        activeLiftListener?.let { listener ->
+            try {
+                sensorManager?.unregisterListener(listener)
+            } catch (e: Exception) {
+                Log.e(tag, "Error unregistering lift watcher: ${e.message}")
+            }
+            activeLiftListener = null
         }
     }
 }

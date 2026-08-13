@@ -354,50 +354,41 @@ fun SettingsScreen(
                                 .border(1.dp, DarkBorder, RoundedCornerShape(14.dp))
                                 .padding(14.dp)
                         ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "Cadence Interval (Wait Between Bursts)",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = TextPrimary
-                                    )
-                                    Text(
-                                        text = "Pause duration between repeated flash sequences (e.g. .x.x.x ... .x.x.x)",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = TextSecondary,
-                                        fontSize = 11.sp
-                                    )
-                                }
-                                Text(
-                                    text = "${callConfig.sequenceIntervalMs}ms",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = AmberPrimary,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-
-                            Slider(
-                                value = callConfig.sequenceIntervalMs.toFloat(),
+                            TimingSliderWithInput(
+                                label = "Cadence Interval (Wait Between Bursts)",
+                                valueMs = callConfig.sequenceIntervalMs,
+                                minMs = 300L,
+                                maxMs = 5000L,
+                                stepIncrement = 100L,
+                                unit = "ms",
                                 onValueChange = { ms ->
                                     mainViewModel.updateSettings {
-                                        it.copy(callConfig = it.callConfig.copy(sequenceIntervalMs = ms.toLong()))
+                                        it.copy(callConfig = it.callConfig.copy(sequenceIntervalMs = ms))
                                     }
-                                },
-                                valueRange = 500f..4000f,
-                                steps = 14,
-                                colors = SliderDefaults.colors(
-                                    thumbColor = AmberPrimary,
-                                    activeTrackColor = AmberPrimary,
-                                    inactiveTrackColor = DarkSurfaceVariant
-                                ),
-                                modifier = Modifier.fillMaxWidth()
+                                }
+                            )
+                            Text(
+                                text = "Pause duration between repeated flash sequences while ringing (e.g. .x.x.x ... .x.x.x)",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextSecondary,
+                                fontSize = 11.sp,
+                                modifier = Modifier.padding(top = 4.dp)
                             )
                         }
                     }
+
+                    // Silence Call Flash on Lift Toggle
+                    SettingToggleRow(
+                        icon = Icons.Default.Sensors,
+                        title = "Silence Flash on Lift",
+                        subtitle = "Instantly stop flashing as soon as you pick the phone up from the desk",
+                        checked = callConfig.silenceOnLift,
+                        onCheckedChange = { checked ->
+                            mainViewModel.updateSettings {
+                                it.copy(callConfig = it.callConfig.copy(silenceOnLift = checked))
+                            }
+                        }
+                    )
 
                     // Shared Unified LED Configuration Editor for Calls
                     LedConfigurationEditor(
@@ -414,6 +405,7 @@ fun SettingsScreen(
                         initialBypassDnd = callConfig.bypassDnd,
                         showDndBypassToggle = true,
                         showImportanceFilter = false,
+                        showDebouncer = false,
                         isTesting = isTestingCall,
                         onTestClick = { _, _ ->
                             mainViewModel.triggerTestCallCadence(callConfig)

@@ -20,5 +20,6 @@ data class CallFlashConfig(
     val fadeOutMs: Long = 140L,
     val gapMs: Long = 100L,
     val sequenceIntervalMs: Long = 1500L, // Delay between sequences e.g. .x.x.x ... .x.x.x
+    val silenceOnLift: Boolean = true,     // Instantly silence flash when user lifts phone from desk
     val bypassDnd: Boolean = true
 )

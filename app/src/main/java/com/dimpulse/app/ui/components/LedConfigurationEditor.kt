@@ -82,6 +82,7 @@ fun LedConfigurationEditor(
     initialBypassDnd: Boolean = false,
     showDndBypassToggle: Boolean = true,
     showImportanceFilter: Boolean = true,
+    showDebouncer: Boolean = true,
     isTesting: Boolean = false,
     onTestClick: (FlashPattern, Int) -> Unit,
     onStopTestClick: () -> Unit,
@@ -324,31 +325,33 @@ fun LedConfigurationEditor(
         }
 
         // 5. Debouncer / Burst Rate Limit (Both Slider AND Enterable Field)
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(DarkSurfaceVariant.copy(alpha = 0.4f))
-                .border(1.dp, DarkBorder, RoundedCornerShape(14.dp))
-                .padding(14.dp)
-        ) {
-            TimingSliderWithInput(
-                label = "Burst Rate Limit (Debounce)",
-                valueMs = cooldownSeconds.toLong(),
-                maxMs = 30L,
-                unit = "s",
-                onValueChange = {
-                    cooldownSeconds = it.toInt()
-                    showSavedFeedback = false
-                }
-            )
-            Text(
-                text = if (cooldownSeconds == 0) "No rate limit (fires on every notification)" else "Max 1 flash sequence per ${cooldownSeconds}s",
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary,
-                fontSize = 11.sp,
-                modifier = Modifier.padding(top = 4.dp)
-            )
+        if (showDebouncer) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(DarkSurfaceVariant.copy(alpha = 0.4f))
+                    .border(1.dp, DarkBorder, RoundedCornerShape(14.dp))
+                    .padding(14.dp)
+            ) {
+                TimingSliderWithInput(
+                    label = "Burst Rate Limit (Debounce)",
+                    valueMs = cooldownSeconds.toLong(),
+                    maxMs = 30L,
+                    unit = "s",
+                    onValueChange = {
+                        cooldownSeconds = it.toInt()
+                        showSavedFeedback = false
+                    }
+                )
+                Text(
+                    text = if (cooldownSeconds == 0) "No rate limit (fires on every notification)" else "Max 1 flash sequence per ${cooldownSeconds}s",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextSecondary,
+                    fontSize = 11.sp,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
         }
 
         // 6. Importance Filter
@@ -523,10 +526,12 @@ fun LedConfigurationEditor(
 }
 
 @Composable
-private fun TimingSliderWithInput(
+fun TimingSliderWithInput(
     label: String,
     valueMs: Long,
     maxMs: Long,
+    minMs: Long = 0L,
+    stepIncrement: Long = 10L,
     unit: String = "ms",
     onValueChange: (Long) -> Unit
 ) {
@@ -593,13 +598,17 @@ private fun TimingSliderWithInput(
         }
 
         Slider(
-            value = valueMs.toFloat().coerceIn(0f, maxMs.toFloat()),
-            onValueChange = {
-                val clamped = it.toLong()
-                onValueChange(clamped)
-                textValue = clamped.toString()
+            value = valueMs.toFloat().coerceIn(minMs.toFloat(), maxMs.toFloat()),
+            onValueChange = { raw ->
+                val snapped = if (stepIncrement > 1) {
+                    ((kotlin.math.round((raw - minMs) / stepIncrement.toFloat()) * stepIncrement) + minMs).toLong().coerceIn(minMs, maxMs)
+                } else {
+                    raw.toLong().coerceIn(minMs, maxMs)
+                }
+                onValueChange(snapped)
+                textValue = snapped.toString()
             },
-            valueRange = 0f..maxMs.toFloat(),
+            valueRange = minMs.toFloat()..maxMs.toFloat(),
             colors = SliderDefaults.colors(
                 thumbColor = AmberPrimary,
                 activeTrackColor = AmberPrimary,

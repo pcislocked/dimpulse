@@ -179,6 +179,7 @@ class DimFlashNotificationListener : NotificationListenerService() {
             Log.i(tag, "Call notification removed (${sbn.packageName}): stopping active call cadence loop")
             activeCallKey = null
             val app = application as? DimPulseApp
+            app?.proximityHelper?.stopLiftWatcher()
             app?.pulseEngine?.stop()
         }
     }
@@ -212,8 +213,19 @@ class DimFlashNotificationListener : NotificationListenerService() {
             activeCallKey = sbn.key
             Log.i(tag, "Starting incoming call flash cadence: loopMode=${callConfig.loopMode}, seqInterval=${callConfig.sequenceIntervalMs}ms")
 
+            // Start event-gated lift watcher to silence call flash as soon as user picks up phone
+            if (callConfig.silenceOnLift && callConfig.loopMode == CallFlashLoopMode.CONTINUOUS_LOOP) {
+                app.proximityHelper.startLiftWatcher {
+                    Log.i(tag, "Phone lifted from desk during ringing call: silencing flash cadence")
+                    activeCallKey = null
+                    app.pulseEngine.stop()
+                }
+            }
+
             if (callConfig.loopMode == CallFlashLoopMode.CONTINUOUS_LOOP) {
-                app.pulseEngine.startContinuousCallCadence(callConfig)
+                app.pulseEngine.startContinuousCallCadence(callConfig) {
+                    app.proximityHelper.stopLiftWatcher()
+                }
             } else {
                 val pattern = FlashPattern(
                     preset = callConfig.profilePreset,
