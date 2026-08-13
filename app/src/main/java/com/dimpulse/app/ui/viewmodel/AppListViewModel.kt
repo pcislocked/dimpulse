@@ -121,7 +121,8 @@ class AppListViewModel : ViewModel() {
                     packageName = app.packageName,
                     appName = app.appName,
                     isEnabled = isEnabled,
-                    patternType = global.defaultPattern,
+                    flashStyle = global.defaultFlashStyle,
+                    repeatCount = global.defaultRepeatCount,
                     strengthLevel = global.defaultStrength
                 )
                 repository.saveAppConfig(newConfig)

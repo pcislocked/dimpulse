@@ -125,14 +125,18 @@ class DimFlashNotificationListener : NotificationListenerService() {
                 return@launch
             }
 
-            // Determine decoupled style, repetitions, and intensity
-            val flashStyle = appConfig?.flashStyle ?: globalSettings.defaultFlashStyle
-            val repeatCount = appConfig?.repeatCount ?: globalSettings.defaultRepeatCount
-            val strengthLevel = appConfig?.strengthLevel ?: globalSettings.defaultStrength
-            val repeatIntervalSec = appConfig?.repeatIntervalSeconds ?: globalSettings.repeatIntervalSeconds
-            val flashPattern = FlashPattern(style = flashStyle, repeatCount = repeatCount)
+            val breathingDuration = globalSettings.breathingDurationMs
+            val onDuration = appConfig?.customOnDurationMs ?: 100L
+            val offDuration = appConfig?.customOffDurationMs ?: 120L
+            val flashPattern = FlashPattern(
+                style = flashStyle,
+                repeatCount = repeatCount,
+                breathingDurationMs = breathingDuration,
+                onDurationMs = onDuration,
+                offDurationMs = offDuration
+            )
 
-            Log.i(tag, "Dispatching ambient LED pulse for $packageName: $flashStyle x$repeatCount at level $strengthLevel")
+            Log.i(tag, "Dispatching ambient LED pulse for $packageName: $flashStyle x$repeatCount at level $strengthLevel (${breathingDuration}ms)")
             app.pulseEngine.triggerPattern(flashPattern, strengthLevel)
 
             // Optional repeat nag for missed alerts if configured

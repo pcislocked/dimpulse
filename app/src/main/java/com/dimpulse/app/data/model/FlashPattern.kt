@@ -8,18 +8,24 @@ data class FlashPattern(
     val repeatCount: Int = 1,
     val onDurationMs: Long = 100L,
     val offDurationMs: Long = 120L,
-    val breathingSteps: Int = 16,
-    val breathingStepDelayMs: Long = 25L
+    val breathingDurationMs: Long = 350L,
+    val breathingSteps: Int = 16
 ) {
     companion object {
-        fun defaultFor(style: FlashStyle, repeatCount: Int = 1): FlashPattern {
+        fun defaultFor(
+            style: FlashStyle,
+            repeatCount: Int = 1,
+            breathingDurationMs: Long = 350L,
+            onDurationMs: Long = 100L,
+            offDurationMs: Long = 120L
+        ): FlashPattern {
             return FlashPattern(
                 style = style,
                 repeatCount = repeatCount.coerceIn(1, 4),
-                onDurationMs = 100L,
-                offDurationMs = 120L,
-                breathingSteps = 16,
-                breathingStepDelayMs = 25L
+                onDurationMs = onDurationMs,
+                offDurationMs = offDurationMs,
+                breathingDurationMs = breathingDurationMs,
+                breathingSteps = 16
             )
         }
     }

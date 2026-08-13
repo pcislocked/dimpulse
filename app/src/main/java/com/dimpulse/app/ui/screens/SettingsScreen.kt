@@ -338,6 +338,79 @@ fun SettingsScreen(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
+                // Waveform Speed & Breathing Duration
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Waveform Speed (Duration)",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = "${globalSettings.breathingDurationMs}ms",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AmberPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf(
+                        200L to "Snappy (200ms)",
+                        350L to "Balanced (350ms)",
+                        600L to "Ambient (600ms)"
+                    ).forEach { (ms, label) ->
+                        val isSelected = globalSettings.breathingDurationMs == ms
+                        val bg = if (isSelected) AmberPrimary else DarkSurfaceVariant
+                        val textCol = if (isSelected) DarkBackground else TextPrimary
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(bg)
+                                .border(1.dp, if (isSelected) AmberPrimary else DarkBorder, RoundedCornerShape(8.dp))
+                                .clickable {
+                                    mainViewModel.updateSettings { it.copy(breathingDurationMs = ms) }
+                                }
+                                .padding(vertical = 6.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = label,
+                                fontSize = 11.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = textCol
+                            )
+                        }
+                    }
+                }
+
+                Slider(
+                    value = globalSettings.breathingDurationMs.toFloat(),
+                    onValueChange = {
+                        mainViewModel.updateSettings { s -> s.copy(breathingDurationMs = it.toLong()) }
+                    },
+                    valueRange = 150f..800f,
+                    steps = 12,
+                    colors = SliderDefaults.colors(
+                        thumbColor = AmberPrimary,
+                        activeTrackColor = AmberPrimary,
+                        inactiveTrackColor = DarkSurfaceVariant
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
                 // Repeat Nag Interval
                 Row(
                     modifier = Modifier.fillMaxWidth(),
