@@ -102,13 +102,12 @@ flowchart TD
 
 ## 📱 Hardware Compatibility
 
-Optimized for devices with hardware-level LED current regulation:
-* **Google Pixel 9 / Pixel 9 Pro / Pixel 9 Pro XL / Pixel 9 Pro Fold**
-* **Google Pixel 7 / 7 Pro / 8 / 8 Pro / Fold / 8a**
+Optimized for devices with hardware-level LED current regulation (supported devices according to gemini):
+* **Google Pixel 7 through 10 series**
 * **Samsung Galaxy Devices on One UI 5+ (Android 13+)**
 * **Any Android 13+ device** exposing `CameraCharacteristics.FLASH_INFO_STRENGTH_MAXIMUM_LEVEL > 1`
 
-*(Devices supporting only binary torch gracefully fallback to micro-timed pulses).*
+*(Devices supporting only binary torch are **NOT** supported.)*
 
 ---
 
