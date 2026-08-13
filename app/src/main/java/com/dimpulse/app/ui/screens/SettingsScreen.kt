@@ -53,7 +53,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.filled.Call
 import com.dimpulse.app.data.model.AlertImportanceFilter
+import com.dimpulse.app.data.model.CallFlashConfig
+import com.dimpulse.app.data.model.CallFlashLoopMode
 import com.dimpulse.app.data.model.FlashPattern
 import com.dimpulse.app.data.model.LightProfilePreset
 import com.dimpulse.app.data.model.TriggerOrientation
@@ -266,7 +269,181 @@ fun SettingsScreen(
             }
         }
 
-        // Section 4: Environmental Filters
+        // Section: Incoming Calls (Voice & Video)
+        SectionHeader(title = "INCOMING CALLS (VOICE & VIDEO)")
+
+        val isTestingCall by mainViewModel.isTestingCall.collectAsState()
+        val callConfig = globalSettings.callConfig
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, DarkBorder, RoundedCornerShape(18.dp)),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = DarkSurface)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Incoming Calls Master Toggle Row
+                SettingToggleRow(
+                    icon = Icons.Default.Call,
+                    title = "Incoming Call Flash",
+                    subtitle = "Flash LED when a voice/video call rings (GSM, WhatsApp, Telegram, etc.)",
+                    checked = callConfig.isEnabled,
+                    onCheckedChange = { isEnabled ->
+                        mainViewModel.updateSettings {
+                            it.copy(callConfig = it.callConfig.copy(isEnabled = isEnabled))
+                        }
+                    }
+                )
+
+                if (callConfig.isEnabled) {
+                    // Loop Mode Selector: Continuous vs One-Time
+                    Column {
+                        Text(
+                            text = "RINGING FLASH MODE",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextMuted,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            CallFlashLoopMode.entries.forEach { mode ->
+                                val isSel = mode == callConfig.loopMode
+                                val bg = if (isSel) AmberPrimary else DarkSurfaceVariant
+                                val textCol = if (isSel) DarkBackground else TextPrimary
+
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(bg)
+                                        .border(1.dp, if (isSel) AmberPrimary else DarkBorder, RoundedCornerShape(10.dp))
+                                        .clickable {
+                                            mainViewModel.updateSettings {
+                                                it.copy(callConfig = it.callConfig.copy(loopMode = mode))
+                                            }
+                                        }
+                                        .padding(vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = mode.title,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
+                                        color = textCol
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Sequence Interval (Cadence delay between flash sequences) if continuous
+                    if (callConfig.loopMode == CallFlashLoopMode.CONTINUOUS_LOOP) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(DarkSurfaceVariant.copy(alpha = 0.4f))
+                                .border(1.dp, DarkBorder, RoundedCornerShape(14.dp))
+                                .padding(14.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Cadence Interval (Wait Between Bursts)",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = TextPrimary
+                                    )
+                                    Text(
+                                        text = "Pause duration between repeated flash sequences (e.g. .x.x.x ... .x.x.x)",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = TextSecondary,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                                Text(
+                                    text = "${callConfig.sequenceIntervalMs}ms",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = AmberPrimary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            Slider(
+                                value = callConfig.sequenceIntervalMs.toFloat(),
+                                onValueChange = { ms ->
+                                    mainViewModel.updateSettings {
+                                        it.copy(callConfig = it.callConfig.copy(sequenceIntervalMs = ms.toLong()))
+                                    }
+                                },
+                                valueRange = 500f..4000f,
+                                steps = 14,
+                                colors = SliderDefaults.colors(
+                                    thumbColor = AmberPrimary,
+                                    activeTrackColor = AmberPrimary,
+                                    inactiveTrackColor = DarkSurfaceVariant
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+
+                    // Shared Unified LED Configuration Editor for Calls
+                    LedConfigurationEditor(
+                        initialPreset = callConfig.profilePreset,
+                        initialRepeatCount = callConfig.repeatCount,
+                        initialStrength = callConfig.strengthLevel,
+                        maxStrengthLevel = hardwareInfo.maxStrengthLevel,
+                        initialFadeInMs = callConfig.fadeInMs,
+                        initialStayOnMs = callConfig.stayOnMs,
+                        initialFadeOutMs = callConfig.fadeOutMs,
+                        initialGapMs = callConfig.gapMs,
+                        initialCooldownSeconds = 0,
+                        initialImportanceFilter = AlertImportanceFilter.ONLY_ALERTING,
+                        initialBypassDnd = callConfig.bypassDnd,
+                        showDndBypassToggle = true,
+                        showImportanceFilter = false,
+                        isTesting = isTestingCall,
+                        onTestClick = { _, _ ->
+                            mainViewModel.triggerTestCallCadence(callConfig)
+                        },
+                        onStopTestClick = {
+                            mainViewModel.stopTestPulse()
+                        },
+                        saveButtonText = "Save Call Settings",
+                        onSaveClick = { preset, count, strength, fadeIn, stayOn, fadeOut, gap, _, _, bypass ->
+                            mainViewModel.updateSettings {
+                                it.copy(
+                                    callConfig = it.callConfig.copy(
+                                        profilePreset = preset,
+                                        repeatCount = count,
+                                        strengthLevel = strength,
+                                        fadeInMs = fadeIn,
+                                        stayOnMs = stayOn,
+                                        fadeOutMs = fadeOut,
+                                        gapMs = gap,
+                                        bypassDnd = bypass
+                                    )
+                                )
+                            }
+                        }
+                    )
+                }
+            }
+        }
+
+        // Section 5: Environmental Filters
         SectionHeader(title = "ENVIRONMENTAL FILTERS")
 
         Card(

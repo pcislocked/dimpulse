@@ -9,6 +9,7 @@ import android.service.notification.StatusBarNotification
 import android.util.Log
 import com.dimpulse.app.DimPulseApp
 import com.dimpulse.app.data.model.AlertImportanceFilter
+import com.dimpulse.app.data.model.CallFlashLoopMode
 import com.dimpulse.app.data.model.FlashPattern
 import com.dimpulse.app.data.model.GlobalFlashSettings
 import kotlinx.coroutines.CoroutineScope
@@ -24,7 +25,12 @@ class DimFlashNotificationListener : NotificationListenerService() {
     private val tag = "DimPulse_NLS"
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var connectedTimestampMs = 0L
+
+    // Debounce map for rapid notification floods (cooldown per package)
     private val lastTriggerTimePerPackage = ConcurrentHashMap<String, Long>()
+
+    // Track active ringing call to stop continuous flash immediately when answered/dismissed
+    private var activeCallKey: String? = null
 
     override fun onListenerConnected() {
         super.onListenerConnected()
@@ -51,8 +57,16 @@ class DimFlashNotificationListener : NotificationListenerService() {
             return
         }
 
-        // 2. Ongoing / foreground service / group summary filter
         val notification = sbn.notification ?: return
+        val packageName = sbn.packageName ?: return
+
+        // 2. Specialized Incoming Call Detection & Handling
+        if (isCallNotification(sbn)) {
+            handleIncomingCallNotification(sbn, app, globalSettings)
+            return
+        }
+
+        // 3. Ongoing / foreground service / group summary filter for standard notifications
         if (sbn.isOngoing || (notification.flags and Notification.FLAG_ONGOING_EVENT) != 0) {
             return
         }
@@ -60,7 +74,7 @@ class DimFlashNotificationListener : NotificationListenerService() {
             return // Skip summary header to avoid double flash
         }
 
-        // 3. Screen state filter
+        // 4. Screen state filter
         if (globalSettings.onlyWhenScreenOff) {
             val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
             if (powerManager?.isInteractive == true) {
@@ -68,15 +82,13 @@ class DimFlashNotificationListener : NotificationListenerService() {
             }
         }
 
-        val packageName = sbn.packageName ?: return
-
-        // 4. Per-app configuration check
+        // 5. Per-app configuration check
         val appConfig = app.repository.getConfigForPackage(packageName)
         if (appConfig != null && !appConfig.isEnabled) {
             return
         }
 
-        // 5. Silent vs Alerting / Loud Importance Filter
+        // 6. Silent vs Alerting / Loud Importance Filter
         val alertFilter = appConfig?.alertImportanceFilter ?: globalSettings.alertImportanceFilter
         if (alertFilter == AlertImportanceFilter.NONE) {
             return
@@ -90,7 +102,7 @@ class DimFlashNotificationListener : NotificationListenerService() {
             }
         }
 
-        // 6. Do Not Disturb (DND) filter
+        // 7. Do Not Disturb (DND) filter
         if (globalSettings.respectDnd) {
             val bypassDnd = appConfig?.bypassDnd ?: false
             if (!bypassDnd && isDndActive()) {
@@ -98,12 +110,12 @@ class DimFlashNotificationListener : NotificationListenerService() {
             }
         }
 
-        // 7. Quiet Hours filter
+        // 8. Quiet Hours filter
         if (globalSettings.quietHoursEnabled && isInQuietHours(globalSettings)) {
             return
         }
 
-        // 8. User-Configurable Burst Rate Limit / Cooldown Debounce
+        // 9. User-Configurable Burst Rate Limit / Cooldown Debounce
         val cooldownSec = appConfig?.cooldownSeconds ?: globalSettings.cooldownSeconds
         if (cooldownSec > 0) {
             val lastTime = lastTriggerTimePerPackage[packageName] ?: 0L
@@ -114,7 +126,7 @@ class DimFlashNotificationListener : NotificationListenerService() {
             lastTriggerTimePerPackage[packageName] = now
         }
 
-        // 9. Orientation & Table / Pocket Gating & Pulse Dispatch
+        // 10. Orientation & Table / Pocket Gating & Pulse Dispatch
         serviceScope.launch {
             val orientationMode = appConfig?.triggerOrientation ?: globalSettings.triggerOrientation
             val allowed = app.proximityHelper.shouldAllowFlash(orientationMode)
@@ -142,10 +154,10 @@ class DimFlashNotificationListener : NotificationListenerService() {
                 gapMs = gap
             )
 
-            Log.i(tag, "Dispatching ambient LED pulse for $packageName: ${preset.title} x$repeatCount at level $strengthLevel (FadeIn:${fadeIn}ms, On:${stayOn}ms, FadeOut:${fadeOut}ms, Gap:${gap}ms)")
+            Log.i(tag, "Dispatching ambient LED pulse for $packageName: ${preset.title} x$repeatCount at level $strengthLevel")
             app.pulseEngine.triggerPattern(flashPattern, strengthLevel)
 
-            // Optional repeat nag for missed alerts if configured
+            // Optional repeat reminder for missed alerts if configured
             if (repeatIntervalSec > 0) {
                 launch {
                     delay(repeatIntervalSec * 1000L)
@@ -156,6 +168,73 @@ class DimFlashNotificationListener : NotificationListenerService() {
                 }
             }
         }
+    }
+
+    override fun onNotificationRemoved(sbn: StatusBarNotification?) {
+        super.onNotificationRemoved(sbn)
+        if (sbn == null) return
+
+        // If active call was answered, declined, or caller hung up, stop continuous flash loop immediately
+        if (sbn.key == activeCallKey || isCallNotification(sbn)) {
+            Log.i(tag, "Call notification removed (${sbn.packageName}): stopping active call cadence loop")
+            activeCallKey = null
+            val app = application as? DimPulseApp
+            app?.pulseEngine?.stop()
+        }
+    }
+
+    private fun handleIncomingCallNotification(
+        sbn: StatusBarNotification,
+        app: DimPulseApp,
+        globalSettings: GlobalFlashSettings
+    ) {
+        val callConfig = globalSettings.callConfig
+        if (!callConfig.isEnabled) return
+
+        // Screen state check
+        if (globalSettings.onlyWhenScreenOff) {
+            val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
+            if (powerManager?.isInteractive == true) {
+                return
+            }
+        }
+
+        // DND check for calls
+        if (globalSettings.respectDnd && !callConfig.bypassDnd && isDndActive()) {
+            return
+        }
+
+        // Orientation check
+        serviceScope.launch {
+            val allowed = app.proximityHelper.shouldAllowFlash(globalSettings.triggerOrientation)
+            if (!allowed) return@launch
+
+            activeCallKey = sbn.key
+            Log.i(tag, "Starting incoming call flash cadence: loopMode=${callConfig.loopMode}, seqInterval=${callConfig.sequenceIntervalMs}ms")
+
+            if (callConfig.loopMode == CallFlashLoopMode.CONTINUOUS_LOOP) {
+                app.pulseEngine.startContinuousCallCadence(callConfig)
+            } else {
+                val pattern = FlashPattern(
+                    preset = callConfig.profilePreset,
+                    repeatCount = callConfig.repeatCount,
+                    fadeInMs = callConfig.fadeInMs,
+                    stayOnMs = callConfig.stayOnMs,
+                    fadeOutMs = callConfig.fadeOutMs,
+                    gapMs = callConfig.gapMs
+                )
+                app.pulseEngine.triggerPattern(pattern, callConfig.strengthLevel)
+            }
+        }
+    }
+
+    private fun isCallNotification(sbn: StatusBarNotification): Boolean {
+        val n = sbn.notification ?: return false
+        val isCategoryCall = n.category == Notification.CATEGORY_CALL
+        val isInsistent = (n.flags and Notification.FLAG_INSISTENT) != 0
+        val isCallStyle = n.extras?.containsKey(Notification.EXTRA_CALL_PERSON) == true ||
+                n.extras?.containsKey("android.callType") == true
+        return isCategoryCall || isInsistent || isCallStyle
     }
 
     private fun isNotificationAlerting(sbn: StatusBarNotification): Boolean {

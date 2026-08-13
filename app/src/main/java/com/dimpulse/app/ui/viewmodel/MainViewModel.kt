@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dimpulse.app.DimPulseApp
+import com.dimpulse.app.data.model.CallFlashConfig
 import com.dimpulse.app.data.model.FlashPattern
 import com.dimpulse.app.data.model.GlobalFlashSettings
 import com.dimpulse.app.engine.FlashHardwareInfo
@@ -30,6 +31,9 @@ class MainViewModel : ViewModel() {
     private val _isTestingPulse = MutableStateFlow(false)
     val isTestingPulse: StateFlow<Boolean> = _isTestingPulse.asStateFlow()
 
+    private val _isTestingCall = MutableStateFlow(false)
+    val isTestingCall: StateFlow<Boolean> = _isTestingCall.asStateFlow()
+
     fun refreshPermissions(context: Context) {
         _isNotificationAccessGranted.value = PermissionUtils.isNotificationListenerGranted(context)
         _isBatteryOptimizationIgnored.value = PermissionUtils.isBatteryOptimizationIgnored(context)
@@ -48,9 +52,8 @@ class MainViewModel : ViewModel() {
     }
 
     fun triggerTestPulse(pattern: FlashPattern, strength: Int) {
-        if (_isTestingPulse.value) {
-            pulseEngine.stop()
-            _isTestingPulse.value = false
+        if (_isTestingPulse.value || _isTestingCall.value) {
+            stopTestPulse()
             return
         }
 
@@ -60,8 +63,21 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    fun triggerTestCallCadence(config: CallFlashConfig) {
+        if (_isTestingCall.value || _isTestingPulse.value) {
+            stopTestPulse()
+            return
+        }
+
+        _isTestingCall.value = true
+        pulseEngine.startContinuousCallCadence(config) {
+            _isTestingCall.value = false
+        }
+    }
+
     fun stopTestPulse() {
         pulseEngine.stop()
         _isTestingPulse.value = false
+        _isTestingCall.value = false
     }
 }

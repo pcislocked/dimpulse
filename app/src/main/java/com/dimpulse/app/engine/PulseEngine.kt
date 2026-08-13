@@ -1,5 +1,6 @@
 package com.dimpulse.app.engine
 
+import com.dimpulse.app.data.model.CallFlashConfig
 import com.dimpulse.app.data.model.FlashPattern
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -58,6 +59,48 @@ class PulseEngine(
                                     val gap = pattern.gapMs.coerceAtLeast(20L)
                                     delay(gap)
                                 }
+                            }
+                        }
+                    } finally {
+                        flashController.turnOff()
+                        onComplete?.invoke()
+                    }
+                }
+            }
+        }
+    }
+
+    fun startContinuousCallCadence(
+        config: CallFlashConfig,
+        onComplete: (() -> Unit)? = null
+    ) {
+        scope.launch {
+            mutex.withLock {
+                activeJob?.cancelAndJoin()
+                activeJob = launch {
+                    try {
+                        withTimeout(60000L) { // Call watchdog: 60-second cutoff
+                            val targetLevel = config.strengthLevel.coerceAtLeast(1)
+                            val repeats = config.repeatCount.coerceIn(1, 6)
+
+                            while (true) {
+                                for (r in 0 until repeats) {
+                                    executeSinglePulse(
+                                        maxLevel = targetLevel,
+                                        fadeInMs = config.fadeInMs.coerceAtLeast(0L),
+                                        stayOnMs = config.stayOnMs.coerceAtLeast(0L),
+                                        fadeOutMs = config.fadeOutMs.coerceAtLeast(0L)
+                                    )
+
+                                    if (r < repeats - 1) {
+                                        flashController.turnOff()
+                                        delay(config.gapMs.coerceAtLeast(20L))
+                                    }
+                                }
+
+                                // Delay between cadence sequences (e.g. .x.x.x ... .x.x.x)
+                                flashController.turnOff()
+                                delay(config.sequenceIntervalMs.coerceAtLeast(200L))
                             }
                         }
                     } finally {

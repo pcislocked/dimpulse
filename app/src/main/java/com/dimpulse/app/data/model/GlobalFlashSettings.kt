@@ -20,5 +20,6 @@ data class GlobalFlashSettings(
     val quietHoursStartMinutes: Int = 22 * 60, // 22:00
     val quietHoursEndMinutes: Int = 7 * 60,    // 07:00
     val repeatIntervalSeconds: Int = 0,
-    val cooldownSeconds: Int = 3
+    val cooldownSeconds: Int = 3,
+    val callConfig: CallFlashConfig = CallFlashConfig()
 )
