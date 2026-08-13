@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">DimPulse</string>
+    <string name="notification_listener_service_label">DimPulse Ambient Notification Flasher</string>
+    <string name="notification_listener_desc">Monitors incoming notifications to trigger gentle, low-intensity LED pulses based on your app rules.</string>
+</resources>
